@@ -7,31 +7,37 @@ tasks:
       - task --list
 
   install:
-    desc: "Step 1: Install all required pnpm dependencies. Always run this first after cloning!"
+    desc: "Step 1: Install all required dependencies."
     cmds:
       - pnpm install
+      - cd playground-vite && npm install
 
   dev:prepare:
-    desc: "Step 2: Prepare the playground. This generates necessary Nuxt types (.nuxt) for IDE support."
+    desc: "Step 2: Prepare the Nuxt playground."
     cmds:
       - pnpm run dev:prepare
 
   dev:
-    desc: "Step 3: Start the playground server. This spins up the app so you can test the <script server> module."
+    desc: "Step 3: Start the Nuxt playground server."
     cmds:
       - pnpm run dev
 
+  dev:vite:
+    desc: "Step 4: Start the Vite playground server."
+    cmds:
+      - cd playground-vite && npm run dev
+
   lint:
-    desc: "Step 4: Lint your code. Run this before committing to ensure everything matches styling rules."
+    desc: "Step 5: Lint your code."
     cmds:
       - pnpm run lint
 
   build:
-    desc: "Step 5: Build the Nuxt module itself. Use this when you are ready to prepare the module for release."
+    desc: "Step 6: Build the module."
     cmds:
       - pnpm run build
 
   dev:build:
-    desc: "Step 6: Build the playground application. Use this to verify the playground builds correctly in production mode."
+    desc: "Step 7: Build the Nuxt playground application."
     cmds:
       - pnpm run dev:build

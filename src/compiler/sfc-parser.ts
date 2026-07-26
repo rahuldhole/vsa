@@ -2,8 +2,14 @@ import MagicString from 'magic-string'
 import fs from 'fs'
 import path from 'path'
 
-export const ViteScriptServerPlugin = (nuxtDir: string) => {
+export interface ScriptServerOptions {
+  // Directory to write the stubs and registry (e.g. .nuxt or node_modules/.cache/script-server)
+  outDir?: string
+}
+
+export const ViteScriptServerPlugin = (options: ScriptServerOptions = {}): any => {
   let exportedFunctions: string[] = []
+  const outDir = options.outDir || path.resolve(process.cwd(), 'node_modules/.cache/script-server')
 
   function scanDir(dir: string) {
     if (!fs.existsSync(dir)) return
@@ -31,13 +37,20 @@ export const ViteScriptServerPlugin = (nuxtDir: string) => {
   }
 
   function writeClientStubs() {
-    if (!fs.existsSync(nuxtDir)) {
-      fs.mkdirSync(nuxtDir, { recursive: true })
+    if (!fs.existsSync(outDir)) {
+      fs.mkdirSync(outDir, { recursive: true })
     }
-    const stubPath = path.resolve(nuxtDir, 'script-server-stubs.ts')
+    const stubPath = path.resolve(outDir, 'script-server-stubs.ts')
+    // Support both Nuxt's $fetch and standard fetch for pure Vue apps
     const code = exportedFunctions.map(fnName => `
 export const ${fnName} = async (...args: any[]) => {
-  const res = await $fetch('/__script_server_rpc', {
+  const fetcher = typeof $fetch !== 'undefined' ? $fetch : (url: string, opts: any) => fetch(url, {
+    method: opts.method,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(opts.body)
+  }).then(r => r.json());
+
+  const res = await fetcher('/__script_server_rpc', {
     method: 'POST',
     body: { functionName: '${fnName}', args }
   })
@@ -48,14 +61,75 @@ export const ${fnName} = async (...args: any[]) => {
   }
 
   return {
-    name: 'vite-plugin-nuxt-script-server',
+    name: 'vite-plugin-vue-script-server',
     enforce: 'pre' as const,
 
     buildStart() {
       exportedFunctions = []
       scanDir(process.cwd())
-      console.log('[vite-plugin-nuxt-script-server] Found server exports:', exportedFunctions)
+      console.log('[vite-plugin-vue-script-server] Found server exports:', exportedFunctions)
       writeClientStubs()
+    },
+
+    config() {
+      return {
+        resolve: {
+          alias: {
+            '#script-server': path.resolve(outDir, 'script-server-stubs.ts')
+          }
+        }
+      }
+    },
+
+    configureServer(server: any) {
+      // Add dev server middleware for pure Vite + Vue apps
+      server.middlewares.use('/__script_server_rpc', async (req: import('http').IncomingMessage, res: import('http').ServerResponse) => {
+        if (req.method !== 'POST') {
+          res.statusCode = 405
+          res.end('Method Not Allowed')
+          return
+        }
+
+        let body = ''
+        req.on('data', (chunk: Buffer) => {
+          body += chunk.toString()
+        })
+        req.on('end', async () => {
+          try {
+            const { functionName, args } = JSON.parse(body)
+            if (!functionName) {
+              res.statusCode = 400
+              res.end(JSON.stringify({ error: 'Missing functionName' }))
+              return
+            }
+
+            const registryPath = path.resolve(outDir, 'script-server-registry.ts')
+            if (!fs.existsSync(registryPath)) {
+              res.statusCode = 500
+              res.end(JSON.stringify({ error: 'Server registry not found' }))
+              return
+            }
+
+            // Using Vite's ssrLoadModule to evaluate the file with ES modules support
+            const registry = await server.ssrLoadModule(registryPath)
+
+            if (typeof registry[functionName] !== 'function') {
+              res.statusCode = 500
+              res.end(JSON.stringify({ error: `Function ${functionName} is not exported from <script server>` }))
+              return
+            }
+
+            const result = await registry[functionName](...(args || []))
+            res.setHeader('Content-Type', 'application/json')
+            res.end(JSON.stringify(result))
+
+          } catch (err: any) {
+            console.error('Script Server Error:', err)
+            res.statusCode = 500
+            res.end(JSON.stringify({ error: err.message || 'Internal Server Error' }))
+          }
+        })
+      })
     },
 
     transform(code: string, id: string) {
@@ -76,8 +150,11 @@ export const ${fnName} = async (...args: any[]) => {
         }
       }
 
-      // Write server code to registry for the Nitro handler
-      const registryPath = path.resolve(nuxtDir, 'script-server-registry.ts')
+      // Write server code to registry
+      if (!fs.existsSync(outDir)) {
+        fs.mkdirSync(outDir, { recursive: true })
+      }
+      const registryPath = path.resolve(outDir, 'script-server-registry.ts')
       fs.writeFileSync(registryPath, serverCode)
 
       // Re-generate client stubs (handles HMR case)

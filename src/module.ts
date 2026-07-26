@@ -14,7 +14,7 @@ export default defineNuxtModule({
     const nuxtDir = nuxt.options.buildDir
 
     // 1. Add Vite Plugin to parse <script server>, write stubs and registry
-    addVitePlugin(ViteScriptServerPlugin(nuxtDir))
+    addVitePlugin(ViteScriptServerPlugin({ outDir: nuxtDir }))
 
     // 2. Add Nitro server handler for RPC
     addServerHandler({
@@ -35,3 +35,5 @@ export default defineNuxtModule({
     })
   }
 })
+
+export { ViteScriptServerPlugin } from './compiler/sfc-parser'
