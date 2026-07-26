@@ -41,3 +41,13 @@ tasks:
     desc: "Step 7: Build the Nuxt playground application."
     cmds:
       - pnpm run dev:build
+
+  dev:todo-nuxt:
+    desc: "Step 8: Start the Nuxt todo list example."
+    cmds:
+      - cd examples/todo-list-nuxt && pnpm install && pnpm run dev
+
+  dev:todo-vue:
+    desc: "Step 9: Start the Vite todo list example."
+    cmds:
+      - cd examples/todo-list-vue && pnpm install && pnpm run dev
