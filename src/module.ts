@@ -1,4 +1,4 @@
-import { defineNuxtModule, addVitePlugin, addServerHandler, createResolver, addTemplate } from '@nuxt/kit'
+import { defineNuxtModule, addVitePlugin, addServerHandler, createResolver } from '@nuxt/kit'
 import { ViteScriptServerPlugin } from './compiler/sfc-parser'
 
 export default defineNuxtModule({
@@ -9,7 +9,7 @@ export default defineNuxtModule({
   setup(options, nuxt) {
     const resolver = createResolver(import.meta.url)
 
-    // 1. Add Vite Plugin to parse <script server>
+    // 1. Add Vite Plugin to parse <script server> and resolve virtual imports
     addVitePlugin(ViteScriptServerPlugin())
 
     // 2. Add Nitro server handler for RPC
@@ -17,9 +17,6 @@ export default defineNuxtModule({
       route: '/__script_server_rpc',
       handler: resolver.resolve('./runtime/server-handler')
     })
-
-    // 3. Setup virtual module alias for client stubs
-    nuxt.options.alias['#script-server'] = resolver.resolve('./runtime/client-stub')
 
     // Add typescript definitions for the virtual module
     nuxt.hook('prepare:types', (options) => {

@@ -1,17 +1,36 @@
-import { createUnplugin } from 'unplugin'
 import MagicString from 'magic-string'
-import { parse } from '@vue/compiler-sfc'
 import fs from 'fs'
 import path from 'path'
 
-// We will write the extracted server functions to a file that the Nitro handler can import.
-// For the MVP, we assume a single app.vue or a few files, and we just export everything from them.
-let serverFunctions = ''
-
 export const ViteScriptServerPlugin = () => {
+  // Store the list of extracted function names
+  let exportedFunctions: string[] = []
+
   return {
     name: 'vite-plugin-nuxt-script-server',
     enforce: 'pre' as const,
+    
+    resolveId(id: string) {
+      if (id === '#script-server') {
+        return '\0#script-server'
+      }
+    },
+
+    load(id: string) {
+      if (id === '\0#script-server') {
+        const exportsCode = exportedFunctions.map(fnName => `
+export const ${fnName} = async (...args) => {
+  return await $fetch('/__script_server_rpc', {
+    method: 'POST',
+    body: { functionName: '${fnName}', args }
+  })
+}
+        `).join('\n')
+        
+        return exportsCode
+      }
+    },
+
     transform(code: string, id: string) {
       if (!id.endsWith('.vue')) return null
 
@@ -21,16 +40,23 @@ export const ViteScriptServerPlugin = () => {
 
       const serverCode = match[1]
 
+      // Extract the exported function names
+      const exportRegex = /export\s+(?:async\s+)?function\s+([a-zA-Z0-9_]+)/g
+      let m
+      while ((m = exportRegex.exec(serverCode)) !== null) {
+        if (!exportedFunctions.includes(m[1])) {
+          exportedFunctions.push(m[1])
+        }
+      }
+
       // Extract the server code and save it to a registry file
-      // In a real implementation, we'd use a virtual module or proper AST parsing
-      // to handle multiple files and name collisions.
       const nuxtDir = path.resolve(process.cwd(), '.nuxt')
       if (!fs.existsSync(nuxtDir)) {
         fs.mkdirSync(nuxtDir, { recursive: true })
       }
       const registryPath = path.resolve(nuxtDir, 'script-server-registry.ts')
       
-      // We just append or overwrite for the MVP. Overwrite is safer for a single file demo.
+      // Overwrite for the MVP single-file demo.
       fs.writeFileSync(registryPath, serverCode)
 
       // Remove the <script server> block from the client/server vue components
