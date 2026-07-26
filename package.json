@@ -1,8 +1,11 @@
 {
-  "name": "vsa",
-  "version": "1.0.0",
+  "name": "@rahuldhole/vsa",
+  "version": "0.0.1",
   "description": "Vue Server Actions",
   "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
   "exports": {
     ".": {
       "import": "./dist/module.mjs",
