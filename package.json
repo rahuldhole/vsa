@@ -1,0 +1,35 @@
+{
+  "name": "nuxt-script-server",
+  "version": "1.0.0",
+  "description": "Experimental Nuxt module for <script server> blocks",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/module.mjs",
+      "require": "./dist/module.cjs"
+    }
+  },
+  "main": "./dist/module.cjs",
+  "types": "./dist/types.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "dev": "nuxi dev playground",
+    "dev:build": "nuxi build playground",
+    "dev:prepare": "nuxi prepare playground",
+    "build": "nuxt-module-build build",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "@nuxt/kit": "^3.12.3",
+    "@vue/compiler-sfc": "^3.4.31",
+    "magic-string": "^0.30.10"
+  },
+  "devDependencies": {
+    "@nuxt/module-builder": "^0.8.3",
+    "@nuxt/schema": "^3.12.3",
+    "nuxt": "^3.12.3",
+    "typescript": "^5.5.3"
+  }
+}
