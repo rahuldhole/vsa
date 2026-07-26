@@ -22,9 +22,9 @@
     "dist"
   ],
   "scripts": {
-    "dev": "nuxi dev playground",
-    "dev:build": "nuxi build playground",
-    "dev:prepare": "nuxi prepare playground",
+    "dev": "nuxi dev examples/playground",
+    "dev:build": "nuxi build examples/playground",
+    "dev:prepare": "nuxi prepare examples/playground",
     "build": "nuxt-module-build build",
     "lint": "eslint ."
   },

@@ -10,7 +10,7 @@ tasks:
     desc: "Step 1: Install all required dependencies."
     cmds:
       - pnpm install
-      - cd playground-vite && pnpm install
+      - cd examples/playground-vite && pnpm install
 
   dev:prepare:
     desc: "Step 2: Prepare the Nuxt playground."
@@ -25,7 +25,7 @@ tasks:
   dev:vite:
     desc: "Step 4: Start the Vite playground server."
     cmds:
-      - cd playground-vite && pnpm run dev
+      - cd examples/playground-vite && pnpm run dev
 
   lint:
     desc: "Step 5: Lint your code."
