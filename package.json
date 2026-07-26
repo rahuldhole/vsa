@@ -24,13 +24,13 @@
   "dependencies": {
     "@nuxt/kit": "^3.12.3",
     "@vue/compiler-sfc": "^3.4.31",
-    "h3": "2.0.1-rc.26",
     "magic-string": "^0.30.10"
   },
   "devDependencies": {
     "@nuxt/module-builder": "^0.8.3",
     "@nuxt/schema": "^3.12.3",
     "@types/node": "^26.1.1",
+    "h3": "^1.15.11",
     "nuxt": "^3.12.3",
     "typescript": "^5.5.3"
   }
