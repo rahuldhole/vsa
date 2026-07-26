@@ -18,7 +18,7 @@ export const ViteScriptServerPlugin = (nuxtDir: string) => {
         const code = fs.readFileSync(fullPath, 'utf-8')
         const match = code.match(/<script\s+server>([\s\S]*?)<\/script>/)
         if (match) {
-          const exportRegex = /export\s+(?:async\s+)?function\s+([a-zA-Z0-9_]+)/g
+          const exportRegex = /export\s+(?:(?:async\s+)?function\s+|(?:const|let|var)\s+)([a-zA-Z0-9_]+)/g
           let m
           while ((m = exportRegex.exec(match[1])) !== null) {
             if (!exportedFunctions.includes(m[1])) {
@@ -68,7 +68,7 @@ export const ${fnName} = async (...args: any[]) => {
       const serverCode = match[1]
 
       // Extract the exported function names (in case transform runs before buildStart on HMR)
-      const exportRegex = /export\s+(?:async\s+)?function\s+([a-zA-Z0-9_]+)/g
+      const exportRegex = /export\s+(?:(?:async\s+)?function\s+|(?:const|let|var)\s+)([a-zA-Z0-9_]+)/g
       let m
       while ((m = exportRegex.exec(serverCode)) !== null) {
         if (!exportedFunctions.includes(m[1])) {

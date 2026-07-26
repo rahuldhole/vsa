@@ -7,7 +7,7 @@ const db = {
     { id: 3, name: 'Charlie' }
   ]
 }
-
+export const hello = async () => { return await Promise.resolve("Hello World!") }
 export async function getTopUsers(limit = 5) {
   console.log('[Server] fetching top users with limit:', limit)
   return db.users.slice(0, limit)
@@ -27,13 +27,15 @@ export async function updateUsername(id, newName) {
 <script setup>
 import { ref, onMounted } from 'vue'
 // The compiler automatically converts exports into reactive RPC actions!
-import { getTopUsers, updateUsername } from '#script-server'
+import { getTopUsers, updateUsername, hello } from '#script-server'
 
 const users = ref([])
+const helloMessage = ref('')
 
 onMounted(async () => {
   try {
     users.value = await getTopUsers(10)
+    helloMessage.value = await hello()
   } catch (err) {
     console.error('Failed to fetch users:', err)
   }
@@ -54,10 +56,11 @@ async function handleRename(id) {
     <h1>Nuxt Script Server MVP</h1>
     <ul v-for="user in users" :key="user.id">
       <li>
-        {{ user.name }} 
+        {{ user.name }}
         <button @click="handleRename(user.id)" style="margin-left: 10px;">Rename</button>
       </li>
     </ul>
     <p v-if="users.length === 0">Loading...</p>
+    <p>{{ helloMessage }}</p>
   </div>
 </template>
