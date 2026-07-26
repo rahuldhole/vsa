@@ -1,0 +1,37 @@
+version: '3'
+
+tasks:
+  default:
+    desc: "Welcome! Run 'task --list' to see all available tasks and the order to run them."
+    cmds:
+      - task --list
+
+  install:
+    desc: "Step 1: Install all required pnpm dependencies. Always run this first after cloning!"
+    cmds:
+      - pnpm install
+
+  dev:prepare:
+    desc: "Step 2: Prepare the playground. This generates necessary Nuxt types (.nuxt) for IDE support."
+    cmds:
+      - pnpm run dev:prepare
+
+  dev:
+    desc: "Step 3: Start the playground server. This spins up the app so you can test the <script server> module."
+    cmds:
+      - pnpm run dev
+
+  lint:
+    desc: "Step 4: Lint your code. Run this before committing to ensure everything matches styling rules."
+    cmds:
+      - pnpm run lint
+
+  build:
+    desc: "Step 5: Build the Nuxt module itself. Use this when you are ready to prepare the module for release."
+    cmds:
+      - pnpm run build
+
+  dev:build:
+    desc: "Step 6: Build the playground application. Use this to verify the playground builds correctly in production mode."
+    cmds:
+      - pnpm run dev:build
