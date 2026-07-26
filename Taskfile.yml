@@ -18,7 +18,7 @@ tasks:
       - pnpm run dev:prepare
 
   dev:
-    desc: "Step 3: Start the Nuxt playground server."
+    desc: "Step 3: Start the Nuxt playground server. This spins up the app so you can test the VSA module."
     cmds:
       - pnpm run dev
 

@@ -1,10 +1,14 @@
 {
-  "name": "nuxt-script-server",
+  "name": "vsa",
   "version": "1.0.0",
-  "description": "Experimental Nuxt module for <script server> blocks",
+  "description": "Vue Server Actions",
   "type": "module",
   "exports": {
     ".": {
+      "import": "./dist/module.mjs",
+      "require": "./dist/module.cjs"
+    },
+    "./vite": {
       "import": "./dist/module.mjs",
       "require": "./dist/module.cjs"
     }

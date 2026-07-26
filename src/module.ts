@@ -4,7 +4,7 @@ import path from 'path'
 
 export default defineNuxtModule({
   meta: {
-    name: 'nuxt-script-server',
+    name: 'vsa',
     configKey: 'scriptServer'
   },
   setup(options, nuxt) {
