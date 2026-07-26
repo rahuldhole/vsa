@@ -1,8 +1,8 @@
-import { defineEventHandler, readBody, createError } from 'h3'
+import { defineEventHandler, readBody, createError, H3Event } from 'h3'
 import path from 'path'
 import fs from 'fs'
 
-export default defineEventHandler(async (event) => {
+export default defineEventHandler(async (event: H3Event) => {
   const body = await readBody(event)
   const { functionName, args } = body
 
@@ -19,8 +19,8 @@ export default defineEventHandler(async (event) => {
       throw new Error('Server registry not found')
     }
 
-    // Use dynamic import with cache busting
-    const registry = await import(registryPath + '?t=' + Date.now())
+    // Use dynamic import without cache busting so module state persists
+    const registry = await import(registryPath)
 
     if (typeof registry[functionName] !== 'function') {
       throw new Error(`Function ${functionName} is not exported from <script server>`)
