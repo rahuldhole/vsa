@@ -9,6 +9,9 @@ export interface ScriptServerOptions {
 
 export const ViteScriptServerPlugin = (options: ScriptServerOptions = {}): any => {
   let exportedFunctions: string[] = []
+  // Map of file ID -> server code block, so multiple files' <script server> blocks are merged
+  const serverCodeMap: Map<string, string> = new Map()
+  let viteRoot: string = ''
   const outDir = options.outDir || path.resolve(process.cwd(), 'node_modules/.cache/script-server')
 
   function scanDir(dir: string) {
@@ -24,6 +27,9 @@ export const ViteScriptServerPlugin = (options: ScriptServerOptions = {}): any =
         const code = fs.readFileSync(fullPath, 'utf-8')
         const match = code.match(/<script\s+server>([\s\S]*?)<\/script>/)
         if (match) {
+          // Store this file's server code in the map for registry merging
+          serverCodeMap.set(fullPath, match[1])
+
           const exportRegex = /export\s+(?:(?:async\s+)?function\s+|(?:const|let|var)\s+)([a-zA-Z0-9_]+)/g
           let m
           while ((m = exportRegex.exec(match[1])) !== null) {
@@ -60,15 +66,54 @@ export const ${fnName} = async (...args: any[]) => {
     fs.writeFileSync(stubPath, code)
   }
 
+  function writeServerRegistry() {
+    if (!fs.existsSync(outDir)) {
+      fs.mkdirSync(outDir, { recursive: true })
+    }
+    const registryPath = path.resolve(outDir, 'script-server-registry.ts')
+
+    // Write each file's server code as a separate module to avoid symbol collisions
+    const reExports: string[] = []
+    let moduleIndex = 0
+    for (const [filePath, serverCode] of serverCodeMap.entries()) {
+      const moduleName = `_server_module_${moduleIndex++}`
+      const modulePath = path.resolve(outDir, `${moduleName}.ts`)
+      fs.writeFileSync(modulePath, serverCode)
+
+      // Collect which exports come from this module
+      const exportRegex = /export\s+(?:(?:async\s+)?function\s+|(?:const|let|var)\s+)([a-zA-Z0-9_]+)/g
+      let m
+      const exportNames: string[] = []
+      while ((m = exportRegex.exec(serverCode)) !== null) {
+        exportNames.push(m[1])
+      }
+      if (exportNames.length > 0) {
+        reExports.push(`export { ${exportNames.join(', ')} } from './${moduleName}'`)
+      }
+    }
+
+    // Write a registry that re-exports from all modules
+    fs.writeFileSync(registryPath, reExports.join('\n') + '\n')
+  }
+
   return {
     name: 'vite-plugin-vue-script-server',
     enforce: 'pre' as const,
 
+    // Capture the Vite-resolved project root so we only scan the current app
+    configResolved(config: any) {
+      viteRoot = config.root
+    },
+
     buildStart() {
       exportedFunctions = []
-      scanDir(process.cwd())
+      serverCodeMap.clear()
+      const scanRoot = viteRoot || process.cwd()
+      console.log('[vite-plugin-vue-script-server] Scanning root:', scanRoot, '(viteRoot:', viteRoot, ')')
+      scanDir(scanRoot)
       console.log('[vite-plugin-vue-script-server] Found server exports:', exportedFunctions)
       writeClientStubs()
+      writeServerRegistry()
     },
 
     config() {
@@ -150,12 +195,9 @@ export const ${fnName} = async (...args: any[]) => {
         }
       }
 
-      // Write server code to registry
-      if (!fs.existsSync(outDir)) {
-        fs.mkdirSync(outDir, { recursive: true })
-      }
-      const registryPath = path.resolve(outDir, 'script-server-registry.ts')
-      fs.writeFileSync(registryPath, serverCode)
+      // Store this file's server code in the map and write merged registry
+      serverCodeMap.set(id, serverCode)
+      writeServerRegistry()
 
       // Re-generate client stubs (handles HMR case)
       writeClientStubs()
