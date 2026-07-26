@@ -43,10 +43,11 @@ export const ViteScriptServerPlugin = (options: ScriptServerOptions = {}): any =
   }
 
   function writeClientStubs() {
-    if (!fs.existsSync(outDir)) {
-      fs.mkdirSync(outDir, { recursive: true })
+    const stubsDir = path.resolve(outDir, 'stubs')
+    if (!fs.existsSync(stubsDir)) {
+      fs.mkdirSync(stubsDir, { recursive: true })
     }
-    const stubPath = path.resolve(outDir, 'script-server-stubs.ts')
+    const stubPath = path.resolve(stubsDir, 'index.ts')
     // Support both Nuxt's $fetch and standard fetch for pure Vue apps
     const code = exportedFunctions.map(fnName => `
 export const ${fnName} = async (...args: any[]) => {
@@ -120,7 +121,7 @@ export const ${fnName} = async (...args: any[]) => {
       return {
         resolve: {
           alias: {
-            '#script-server': path.resolve(outDir, 'script-server-stubs.ts')
+            '#script-server': path.resolve(outDir, 'stubs/index.ts')
           }
         }
       }

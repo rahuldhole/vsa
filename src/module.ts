@@ -1,4 +1,5 @@
-import { defineNuxtModule, addVitePlugin, addServerHandler, createResolver } from '@nuxt/kit'
+import { defineNuxtModule, addVitePlugin, addServerHandler, createResolver, addImportsDir, addPluginTemplate } from '@nuxt/kit'
+import fs from 'fs'
 import { ViteScriptServerPlugin } from './compiler/sfc-parser'
 import path from 'path'
 
@@ -23,8 +24,38 @@ export default defineNuxtModule({
     })
 
     // 3. Alias #script-server to the real generated stubs file
-    const stubsPath = path.resolve(nuxtDir, 'script-server-stubs.ts')
+    const stubsDir = path.resolve(nuxtDir, 'stubs')
+    const stubsPath = path.resolve(stubsDir, 'index.ts')
+    
+    // Ensure the stubs file exists synchronously so `unimport` doesn't complain during setup
+    if (!fs.existsSync(stubsDir)) {
+      fs.mkdirSync(stubsDir, { recursive: true })
+    }
+    if (!fs.existsSync(stubsPath)) {
+      fs.writeFileSync(stubsPath, 'export {}', 'utf-8')
+    }
+
     nuxt.options.alias['#script-server'] = stubsPath
+    
+    // 4. Register the stubs directory for auto-imports
+    addImportsDir(stubsDir)
+    
+    // 5. Inject a global Vue plugin to provide `$rpc` for templates
+    addPluginTemplate({
+      filename: 'script-server-plugin.mjs',
+      getContents() {
+        return `
+import { defineNuxtPlugin } from '#app'
+import * as rpc from '#script-server'
+
+export default defineNuxtPlugin(() => {
+  return {
+    provide: { rpc }
+  }
+})
+`
+      }
+    })
 
     // Add typescript definitions for the virtual module
     nuxt.hook('prepare:types', (opts) => {
