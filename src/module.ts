@@ -31,9 +31,37 @@ export default defineNuxtModule({
     if (!fs.existsSync(stubsDir)) {
       fs.mkdirSync(stubsDir, { recursive: true })
     }
-    if (!fs.existsSync(stubsPath)) {
-      fs.writeFileSync(stubsPath, 'export {}', 'utf-8')
+    
+    // Pre-scan for exports so unimport registers them immediately
+    let exportedFunctions: string[] = []
+    function scanForServerExports(dir: string) {
+      if (!fs.existsSync(dir)) return
+      const files = fs.readdirSync(dir)
+      for (const file of files) {
+        const fullPath = path.join(dir, file)
+        if (fs.statSync(fullPath).isDirectory()) {
+          if (!file.startsWith('.') && file !== 'node_modules') {
+            scanForServerExports(fullPath)
+          }
+        } else if (fullPath.endsWith('.vue')) {
+          const code = fs.readFileSync(fullPath, 'utf-8')
+          const match = code.match(/<script\s+server>([\s\S]*?)<\/script>/)
+          if (match) {
+            const exportRegex = /export\s+(?:(?:async\s+)?function\s+|(?:const|let|var)\s+)([a-zA-Z0-9_]+)/g
+            let m
+            while ((m = exportRegex.exec(match[1])) !== null) {
+              if (!exportedFunctions.includes(m[1])) {
+                exportedFunctions.push(m[1])
+              }
+            }
+          }
+        }
+      }
     }
+    scanForServerExports(nuxt.options.srcDir)
+    
+    const initialCode = exportedFunctions.map(fn => `export const ${fn} = (...args: any[]) => {} as any`).join('\n')
+    fs.writeFileSync(stubsPath, initialCode || 'export {}', 'utf-8')
 
     nuxt.options.alias['#script-server'] = stubsPath
     
