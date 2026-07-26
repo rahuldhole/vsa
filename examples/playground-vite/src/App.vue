@@ -1,24 +1,25 @@
-<script server>
-export const getMessage = async () => {
-  return "Hello from Vite dev server middleware!"
-}
-</script>
-
 <script setup lang="ts">
-import { ref } from 'vue'
-// @ts-ignore
-import { getMessage } from '#script-server'
+import { ref, computed } from 'vue'
+import Home from './components/Home.vue'
+import Todo from './components/Todo.vue'
 
-const message = ref('Loading...')
+const currentPath = ref(window.location.hash || '#/')
 
-getMessage().then(msg => {
-  message.value = msg
+window.addEventListener('hashchange', () => {
+  currentPath.value = window.location.hash || '#/'
+})
+
+const currentComponent = computed(() => {
+  return currentPath.value === '#/todo' ? Todo : Home
 })
 </script>
 
 <template>
   <div>
-    <h1>Vite + Vue Script Server</h1>
-    <p>Message from server: {{ message }}</p>
+    <nav style="padding: 10px; background: #eee; margin-bottom: 20px;">
+      <a href="#/" style="margin-right: 15px;">Home (Message)</a>
+      <a href="#/todo">Todo App (SQLite)</a>
+    </nav>
+    <component :is="currentComponent" />
   </div>
 </template>
