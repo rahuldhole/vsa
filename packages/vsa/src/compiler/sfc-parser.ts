@@ -205,7 +205,13 @@ export const ${fnName} = async (...args: any[]) => {
           if (apiRoutes && apiRoutes[urlPath]) {
             const handlers = apiRoutes[urlPath]
             const method = req.method || 'GET'
-            if (typeof handlers[method] === 'function') {
+            
+            // Prioritize template rendering for GET requests that accept HTML, unless explicitly requesting JSON
+            const expectsHtml = method === 'GET' && (req.headers.accept || '').includes('text/html')
+            const expectsJson = (req.headers.accept || '').includes('json') // Covers application/json, application/vnd.api+json, etc
+            const shouldRunApi = typeof handlers[method] === 'function' && (!expectsHtml || expectsJson)
+
+            if (shouldRunApi) {
               // Execute the API handler
               // For pure Vite apps, we mock a simple event object or just pass req/res
               // To keep it simple, we pass { req, res }

@@ -10,6 +10,16 @@ for (const [route, handlers] of Object.entries(apiRoutes)) {
     if (typeof handler === 'function' && ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD'].includes(method)) {
       const h3Method = method.toLowerCase()
       router.add(route, defineEventHandler(async (event: H3Event) => {
+        // Prioritize template rendering for GET requests that accept HTML, unless explicitly requesting JSON
+        if (method === 'GET') {
+          const accept = event.node.req.headers.accept || ''
+          const expectsHtml = accept.includes('text/html')
+          const expectsJson = accept.includes('json') // Covers application/json, application/vnd.api+json, etc
+          if (expectsHtml && !expectsJson) {
+            return // Let Nuxt fall through to page renderer
+          }
+        }
+
         const result = await handler(event)
         if (result !== undefined) {
           return result

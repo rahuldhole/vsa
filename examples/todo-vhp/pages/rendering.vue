@@ -1,6 +1,28 @@
 <script server>
 import os from 'os'
 
+export async function GET() {
+  return {
+    message: 'Hello from rendering.vue GET API!',
+    serverTime: new Date(),
+    hostname: os.hostname()
+  }
+}
+
+export async function POST(event) {
+  const body = event.req ? await new Promise(resolve => {
+    let data = '';
+    event.req.on('data', chunk => data += chunk);
+    event.req.on('end', () => resolve(JSON.parse(data || '{}')));
+  }) : (typeof readBody !== 'undefined' ? await readBody(event) : {});
+
+  return {
+    success: true,
+    message: 'Hello from rendering.vue POST API!',
+    receivedBody: body
+  }
+}
+
 // 1. RPC Endpoints (Methods)
 export const getServerInfo = async () => {
   return {
@@ -46,6 +68,38 @@ const directCount = ref<number | null>(null)
 const rpcServerInfo = ref<{ hostname: string; time: Date } | null>(null)
 const rpcMessage = ref<string | null>(null)
 const rpcCount = ref<number | null>(null)
+
+// --- API Test State ---
+const apiGetResult = ref<any>(null)
+const apiPostResult = ref<any>(null)
+const apiPostInput = ref('Test payload')
+
+const testGetApi = async () => {
+  try {
+    const res = await fetch(window.location.pathname, {
+      headers: { 'Accept': 'application/json' }
+    })
+    apiGetResult.value = await res.json()
+  } catch (e: any) {
+    apiGetResult.value = { error: e.message }
+  }
+}
+
+const testPostApi = async () => {
+  try {
+    const res = await fetch(window.location.pathname, {
+      method: 'POST',
+      headers: { 
+        'Accept': 'application/json',
+        'Content-Type': 'application/json' 
+      },
+      body: JSON.stringify({ text: apiPostInput.value })
+    })
+    apiPostResult.value = await res.json()
+  } catch (e: any) {
+    apiPostResult.value = { error: e.message }
+  }
+}
 
 onMounted(async () => {
   // 1. Client initialization
@@ -153,6 +207,23 @@ onMounted(async () => {
             <span v-else>Fails in ClientOnly (Expected)</span>
           </div>
         </ClientOnly>
+      </section>
+
+      <!-- 6. Same-File API Handlers -->
+      <section class="card" style="grid-column: 1 / -1">
+        <h2>6. Same-File API Handlers</h2>
+        <p class="desc">Fetching JSON from the same URL by setting the <code>Accept: application/json</code> header.</p>
+        
+        <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+          <button @click="testGetApi" class="btn">Test GET API</button>
+        </div>
+        <pre class="content" v-if="apiGetResult" style="overflow-x: auto; font-size: 0.85rem;">{{ JSON.stringify(apiGetResult, null, 2) }}</pre>
+
+        <div style="display: flex; gap: 1rem; margin-bottom: 1rem; align-items: center;">
+          <input v-model="apiPostInput" type="text" class="input" />
+          <button @click="testPostApi" class="btn">Test POST API</button>
+        </div>
+        <pre class="content" v-if="apiPostResult" style="overflow-x: auto; font-size: 0.85rem;">{{ JSON.stringify(apiPostResult, null, 2) }}</pre>
       </section>
     </div>
 
@@ -337,5 +408,27 @@ th {
 
 tr:last-child td {
   border-bottom: none;
+}
+
+.btn {
+  background: #42b883;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.btn:hover {
+  background: #33a06f;
+}
+
+.input {
+  border: 1px solid #eaeaea;
+  padding: 0.5rem;
+  border-radius: 6px;
+  font-size: 1rem;
+  flex-grow: 1;
 }
 </style>
