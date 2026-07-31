@@ -1,0 +1,13 @@
+{
+  "name": "todo-vhp",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "dev": "vhp dev --dir pages",
+    "build": "vhp build --dir pages",
+    "preview": "node pages/.output/server/index.mjs"
+  },
+  "dependencies": {
+    "vhp": "workspace:*"
+  }
+}

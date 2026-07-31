@@ -22,14 +22,25 @@ export default defineNuxtModule({
       route: '/__script_server_rpc',
       handler: resolver.resolve('./runtime/server-handler')
     })
+    
+    // 2.5 Add Nitro middleware for API routes
+    addServerHandler({
+      middleware: true,
+      handler: resolver.resolve('./runtime/api-middleware')
+    })
 
     // 3. Alias #script-server to the real generated stubs file
     const stubsDir = path.resolve(nuxtDir, 'stubs')
     const stubsPath = path.resolve(stubsDir, 'index.ts')
+    const apiRegistryPath = path.resolve(nuxtDir, 'script-server-api.ts')
     
     // Ensure the stubs file exists synchronously so `unimport` doesn't complain during setup
     if (!fs.existsSync(stubsDir)) {
       fs.mkdirSync(stubsDir, { recursive: true })
+    }
+    
+    if (!fs.existsSync(apiRegistryPath)) {
+      fs.writeFileSync(apiRegistryPath, 'export const apiRoutes: Record<string, any> = {};\n', 'utf-8')
     }
     
     // Pre-scan for exports so unimport registers them immediately
@@ -64,6 +75,7 @@ export default defineNuxtModule({
     fs.writeFileSync(stubsPath, initialCode || 'export {}', 'utf-8')
 
     nuxt.options.alias['#script-server'] = stubsPath
+    nuxt.options.alias['#script-server-api'] = apiRegistryPath
     
     // 4. Register the stubs directory for auto-imports
     addImportsDir(stubsDir)

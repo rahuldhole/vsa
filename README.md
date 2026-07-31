@@ -1,6 +1,6 @@
 # vsa (Vue Server Actions)
 
-An experimental plugin for Vue Server Actions via `<script server>` blocks. This module allows you to define server-only logic directly in your Vue components. The compiler automatically converts the exports from the server block into reactive RPC actions!
+An experimental plugin for Vue Server Actions via `<script server>` blocks. The compiler automatically converts the exports from the server block into reactive RPC actions!
 
 ## Development
 

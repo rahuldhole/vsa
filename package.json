@@ -1,47 +1,12 @@
 {
-  "name": "@rahuldhole/vsa",
-  "version": "0.0.1",
-  "description": "Vue Server Actions",
-  "type": "module",
-  "publishConfig": {
-    "access": "public"
-  },
-  "exports": {
-    ".": {
-      "import": "./dist/module.mjs",
-      "require": "./dist/module.cjs"
-    },
-    "./vite": {
-      "import": "./dist/module.mjs",
-      "require": "./dist/module.cjs"
-    }
-  },
-  "main": "./dist/module.cjs",
-  "types": "./dist/types.d.ts",
-  "files": [
-    "dist"
-  ],
+  "name": "vsa-monorepo",
+  "private": true,
   "scripts": {
-    "dev": "nuxi dev examples/playground",
-    "dev:build": "nuxi build examples/playground",
-    "dev:prepare": "nuxi prepare examples/playground",
-    "build": "nuxt-module-build build",
+    "dev": "pnpm -r run dev",
+    "build": "pnpm -r run build",
     "lint": "eslint ."
   },
-  "dependencies": {
-    "@nuxt/kit": "^3.12.3",
-    "@vue/compiler-sfc": "^3.4.31",
-    "better-sqlite3": "^13.0.1",
-    "magic-string": "^0.30.10"
-  },
   "devDependencies": {
-    "@nuxt/module-builder": "^0.8.3",
-    "@nuxt/schema": "^3.12.3",
-    "@types/better-sqlite3": "^7.6.13",
-    "@types/node": "^26.1.1",
-    "h3": "^1.15.11",
-    "nuxt": "^3.12.3",
-    "typescript": "^5.5.3",
-    "vite": "^8.1.5"
+    "eslint": "^9.0.0"
   }
 }
