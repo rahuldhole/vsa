@@ -5,33 +5,69 @@ defineProps({
     required: true
   }
 })
+const navigate = (path) => {
+  if (typeof window !== 'undefined' && window.navigate) {
+    window.navigate(path)
+  }
+}
 </script>
 
 <template>
-  <nav class="top-menu">
-    <a href="/" @click.prevent="window.navigate('/')" :class="{ active: active === 'home' }">Todos</a>
-    <a href="/about" @click.prevent="window.navigate('/about')" :class="{ active: active === 'about' }">About</a>
+  <nav class="top-menu-container">
+    <div class="menu-section">
+      <span class="section-label">SPA Links (&lt;VhpLink&gt;):</span>
+      <nav class="top-menu">
+        <VhpLink to="/" :class="{ active: active === 'home' }">Todos</VhpLink>
+        <VhpLink to="/about" :class="{ active: active === 'about' }">About</VhpLink>
+      </nav>
+    </div>
+    <div class="menu-section">
+      <span class="section-label">MPA Links (Standard &lt;a&gt;):</span>
+      <nav class="top-menu">
+        <a href="/" :class="{ active: active === 'home' }">Todos (Reload)</a>
+        <a href="/about" :class="{ active: active === 'about' }">About (Reload)</a>
+      </nav>
+    </div>
   </nav>
 </template>
 
 <style scoped>
+.top-menu-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.menu-section {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: #fdfdfd;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  border: 1px solid #eaeaea;
+}
+
+.section-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #555;
+  min-width: 180px;
+}
+
 .top-menu {
   display: flex;
-  justify-content: center;
-  gap: 2rem;
-  background: white;
-  padding: 1rem;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-  margin-bottom: 2rem;
-  border-radius: 8px;
+  gap: 1rem;
 }
 
 .top-menu a {
   text-decoration: none;
   color: #666;
   font-weight: 500;
-  padding: 0.5rem 1rem;
+  padding: 0.4rem 0.8rem;
   border-radius: 4px;
+  transition: background-color 0.2s;
 }
 
 .top-menu a.active {

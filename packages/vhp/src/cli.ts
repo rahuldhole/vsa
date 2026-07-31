@@ -148,8 +148,23 @@ const dev = defineCommand({
       const useMultipage = ${isMultipage}
       const rootComponent = useMultipage ? VhpPage : App
       
+      const VhpLink = defineComponent({
+        props: {
+          to: { type: String, required: true }
+        },
+        setup(props, { slots }) {
+          return () => h('a', {
+            href: props.to,
+            onClick: (e) => {
+              e.preventDefault()
+              window.navigate(props.to)
+            }
+          }, slots.default ? slots.default() : [])
+        }
+      })
       const app = createApp(rootComponent)
       app.component('VhpPage', VhpPage)
+      app.component('VhpLink', VhpLink)
       app.provide('rpc', rpc)
       app.mount('#app')
     </script>
@@ -348,8 +363,23 @@ const build = defineCommand({
       const useMultipage = ${isMultipage}
       const rootComponent = useMultipage ? VhpPage : App
       
+      const VhpLink = defineComponent({
+        props: {
+          to: { type: String, required: true }
+        },
+        setup(props, { slots }) {
+          return () => h('a', {
+            href: props.to,
+            onClick: (e) => {
+              e.preventDefault()
+              window.navigate(props.to)
+            }
+          }, slots.default ? slots.default() : [])
+        }
+      })
       const app = createApp(rootComponent)
       app.component('VhpPage', VhpPage)
+      app.component('VhpLink', VhpLink)
       app.provide('rpc', rpc)
       app.mount('#app')
     </script>
