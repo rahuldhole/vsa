@@ -8,19 +8,29 @@ export const serverInfo = async () => {
   }
 }
 
-// const serverHello = "hello from vhp server"
-// console.log("server: ", serverHello);
+const serverHello = "hello from vhp server"
+const count = 5;
+const serverOnlyMessage = "hello from vhp server only"
+const serverOnlyCount = 10;
+
+console.log("server-only-message: ", serverOnlyMessage)
+
 </script>
 
 <script setup lang="ts">
 import { ref, onMounted, inject } from 'vue'
-import { serverInfo as fetchServerInfo } from '#script-server'
+import { serverInfo as fetchServerInfo, count as fetchCount, serverHello as fetchServerHello } from '#script-server'
 
 const rpc = inject<any>('rpc')
 
 const clientInfo = ref<{ browser: string; time: Date } | null>(null)
 const getServerInfo = ref<{ hostname: string; time: Date } | null>(null)
+const getDirectHello = ref<string | null>(null)
+const getDirectCount = ref<number | null>(null)
+
 const getServerInfoRpc = ref<{ hostname: string; time: Date } | null>(null)
+const getServerHello = ref<string | null>(null)
+const getCounter = ref<number | null>(null)
 
 onMounted(async () => {
   clientInfo.value = {
@@ -28,7 +38,12 @@ onMounted(async () => {
     time: new Date(),
   }
   getServerInfo.value = await fetchServerInfo()
+  getDirectHello.value = await fetchServerHello()
+  getDirectCount.value = await fetchCount()
+
   getServerInfoRpc.value = await rpc.serverInfo()
+  getServerHello.value = await rpc.serverHello()
+  getCounter.value = await rpc.count()
 })
 
 const clientHello = "hello from vhp"
@@ -40,26 +55,31 @@ console.log("client: ", clientHello)
     <h1>Rendering Demos</h1>
     <h2>1. Client Side</h2>
     <template v-if="clientInfo">
-      {{ clientInfo.browser }}
-      {{ clientInfo.time }}
-      {{ clientHello }}
+      {{ clientInfo.browser }} <br />
+      {{ clientInfo.time }} <br />
+      {{ clientHello }} <br />
     </template>
     <br />
     <h2>2. Server Side Data Hydration Illusion (Direct Import)</h2>
     <template v-if="getServerInfo">
-      {{ getServerInfo.hostname }}
-      {{ getServerInfo.time }}
+      {{ getServerInfo.hostname }} <br />
+      {{ getServerInfo.time }} <br />
+      {{ getDirectHello }} <br />
+      Count is: {{ getDirectCount }} <br />
     </template>
     <br />
     <h2>3. Server Side Data Hydration Illusion (RPC Inject)</h2>
     <template v-if="getServerInfoRpc">
-      {{ getServerInfoRpc.hostname }}
-      {{ getServerInfoRpc.time }}
+      {{ getServerInfoRpc.hostname }} <br />
+      {{ getServerInfoRpc.time }} <br />
+      {{ getServerHello }} <br />
     </template>
 
-    <!-- TODO -->
-    <!-- <h2>4. Server Side SSR Rendered</h2> -->
-    <!-- {{ serverHello }} -->
+    <h2>4. Server Side SSR Rendered</h2>
+      {{ serverOnlyMessage }}
+      <template v-for="i in serverOnlyCount" :key="i">
+        {{ i }}<br />
+      </template>
     <hr />
 
     <section class="comparison">
