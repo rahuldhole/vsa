@@ -346,9 +346,9 @@ export const ${fnName} = async (...args: any[]) => {
         // Strip 'export ' so it doesn't break <script setup> compilation
         let injectCode = serverCode.replace(/export\s+/g, '')
 
-        // Serialize all primitive variables to global object
+        // Serialize exported variables to global object
         injectCode += `\nif (typeof globalThis !== 'undefined') { globalThis.__VHP_STATE__ = globalThis.__VHP_STATE__ || {}; globalThis.__VHP_STATE__['${safeId}'] = {}; `
-        for (const v of [...exportedVars, ...stateVars]) {
+        for (const v of exportedVars) {
            injectCode += `globalThis.__VHP_STATE__['${safeId}']['${v}'] = ${v};\n`
         }
         injectCode += `}\n`
@@ -360,9 +360,9 @@ export const ${fnName} = async (...args: any[]) => {
           s.prepend('<script setup>\n' + injectCode + '\n</script>\n')
         }
       } else {
-        // Hydrate all primitive variables on client
+        // Hydrate exported variables on client
         let clientMocks = `const __vhp_state_${safeId} = typeof window !== 'undefined' && window.__VHP_STATE__ ? (window.__VHP_STATE__['${safeId}'] || {}) : {};\n`
-        for (const v of [...exportedVars, ...stateVars]) {
+        for (const v of exportedVars) {
            clientMocks += `const ${v} = __vhp_state_${safeId}['${v}'];\n`
         }
         while ((m2 = funcRegex.exec(serverCode)) !== null) {

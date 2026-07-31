@@ -1,119 +1,164 @@
 <script server>
 import os from 'os'
 
-export const serverInfo = async () => {
+// 1. RPC Endpoints (Methods)
+export const getServerInfo = async () => {
   return {
     hostname: os.hostname(),
     time: new Date(),
   }
 }
+export const getMessage = async () => "Hello from VHP RPC"
+export const getCount = async () => 5
 
-export const serverHello = "hello from vhp server"
-export const count = 5;
-const serverOnlyMessage = "hello from vhp server only"
-const serverOnlyCount = 10
+// 2. Public State (Exported Variables) - Hydrated globally, accessible everywhere
+export const publicMessage = "This is a public server variable (hydrated)"
+export const publicItems = [1, 2, 3]
 
-export const serverAccessedInTemplate = "from server"
-export const serverCountAccessedInTemplate = 7
+// 3. Private State (Unexported Variables) - Server-only, hydrated globally for SSR but private
+const privateMessage = "This is a private server variable (server-only)"
+const privateItems = [4, 5, 6]
 
-console.log("server-only-message: ", serverOnlyMessage)
-
+// Log on server
+console.log("[Server] rendering.vue initialized")
 </script>
 
 <script setup lang="ts">
 import { ref, onMounted, inject } from 'vue'
-import { serverInfo as fetchServerInfo, count as fetchCount, serverHello as fetchServerHello } from '#script-server'
+import { 
+  getServerInfo as fetchServerInfo, 
+  getMessage as fetchMessage,
+  getCount as fetchCount
+} from '#script-server'
 
 const rpc = inject<any>('rpc')
 
+// --- Client-Side State ---
 const clientInfo = ref<{ browser: string; time: Date } | null>(null)
-const getServerInfo = ref<{ hostname: string; time: Date } | null>(null)
-const getDirectHello = ref<string | null>(null)
-const getDirectCount = ref<number | null>(null)
+const clientMessage = "Hello from Vue Client"
 
-const getServerInfoRpc = ref<{ hostname: string; time: Date } | null>(null)
-const getServerHello = ref<string | null>(null)
-const getCounter = ref<number | null>(null)
+// --- Direct Import State ---
+const directServerInfo = ref<{ hostname: string; time: Date } | null>(null)
+const directMessage = ref<string | null>(null)
+const directCount = ref<number | null>(null)
+
+// --- RPC Inject State ---
+const rpcServerInfo = ref<{ hostname: string; time: Date } | null>(null)
+const rpcMessage = ref<string | null>(null)
+const rpcCount = ref<number | null>(null)
 
 onMounted(async () => {
+  // 1. Client initialization
   clientInfo.value = {
     browser: navigator.userAgent,
     time: new Date(),
   }
-  getServerInfo.value = await fetchServerInfo()
-  getDirectHello.value = await fetchServerHello()
-  getDirectCount.value = await fetchCount()
+  
+  // 2. Fetch via Direct Import (Tree-shaken)
+  directServerInfo.value = await fetchServerInfo()
+  directMessage.value = await fetchMessage()
+  directCount.value = await fetchCount()
 
-  getServerInfoRpc.value = await rpc.serverInfo()
-  getServerHello.value = await rpc.serverHello()
-  getCounter.value = await rpc.count()
+  // 3. Fetch via RPC Inject (Global)
+  rpcServerInfo.value = await rpc.getServerInfo()
+  rpcMessage.value = await rpc.getMessage()
+  rpcCount.value = await rpc.getCount()
+
+  // 4. Test Private State Accessibility
+  try {
+    console.log("Testing privateMessage access:", privateMessage)
+  } catch (err: any) {
+    console.warn("Expected ReferenceError for privateMessage:", err.message)
+  }
 })
-
-const clientHello = "hello from vhp"
-console.log("client: ", clientHello)
 </script>
 
 <template>
-  <div>
-    <h1>Rendering Demos</h1>
-    <h2>1. Client Side</h2>
-    <template v-if="clientInfo">
-      {{ clientInfo.browser }} <br />
-      {{ clientInfo.time }} <br />
-      {{ clientHello }} <br />
-    </template>
-    <br />
-    <h2>1.5. ClientOnly Component</h2>
-    <ClientOnly>
-      <div>This text and block is wrapped in <code>&lt;ClientOnly&gt;</code>.</div>
-      <div v-if="clientInfo">{{ clientInfo.browser }} (ClientOnly)</div>
-    </ClientOnly>
-    <br />
-    <h2>2. Server Side Data Hydration Illusion (Direct Import)</h2>
-    <template v-if="getServerInfo">
-      {{ getServerInfo.hostname }} <br />
-      {{ getServerInfo.time }} <br />
-      {{ getDirectHello }} <br />
-      Count is: {{ getDirectCount }} <br />
-    </template>
-    <br />
-    <h2>3. Server Side Data Hydration Illusion (RPC Inject)</h2>
-    <template v-if="getServerInfoRpc">
-      {{ getServerInfoRpc.hostname }} <br />
-      {{ getServerInfoRpc.time }} <br />
-      {{ getServerHello }} <br />
-    </template>
+  <div class="rendering-guide">
+    <header>
+      <h1>VHP Rendering Patterns</h1>
+      <p>A comprehensive guide to state hydration and RPC in Vue HTML Protocol.</p>
+    </header>
 
-    <h2>4. Server Side SSR Rendered</h2>
-    <h4>The exported variables</h4>
-    {{ serverAccessedInTemplate }} <br />
-    <template v-for="i in serverCountAccessedInTemplate" :key="i">
-      {{ i }}<br />
-    </template>
-    <br />
+    <div class="grid">
+      <!-- 1. Client-Side Rendering -->
+      <section class="card">
+        <h2>1. Client-Side Rendering</h2>
+        <p class="desc">State generated entirely on the browser after mount.</p>
+        <div class="content" v-if="clientInfo">
+          <p><strong>Browser:</strong> {{ clientInfo.browser }}</p>
+          <p><strong>Time:</strong> {{ clientInfo.time.toLocaleTimeString() }}</p>
+          <p><strong>Message:</strong> {{ clientMessage }}</p>
+        </div>
+        
+        <ClientOnly>
+          <div class="client-only-badge">
+            Loaded via <code>&lt;ClientOnly&gt;</code>
+          </div>
+        </ClientOnly>
+      </section>
 
-    <h4>The exported but inside ClientOnly will not render but hydrate on client side via rpc</h4>
-    <ClientOnly>
-      <div v-if="serverAccessedInTemplate">{{ serverAccessedInTemplate }} (ClientOnly)</div>
-    </ClientOnly>
-    
-    
+      <!-- 2. Direct Import (RPC) -->
+      <section class="card">
+        <h2>2. Direct Import (RPC)</h2>
+        <p class="desc">Fetching server data via tree-shaken <code>#script-server</code> imports.</p>
+        <div class="content" v-if="directServerInfo">
+          <p><strong>Server Host:</strong> {{ directServerInfo.hostname }}</p>
+          <p><strong>Server Time:</strong> {{ new Date(directServerInfo.time).toLocaleTimeString() }}</p>
+          <p><strong>Message:</strong> {{ directMessage }}</p>
+          <p><strong>Count:</strong> {{ directCount }}</p>
+        </div>
+        <div v-else class="loading">Loading...</div>
+      </section>
 
-    <h4>Server only (non exported) will also work:</h4>
-    {{  serverOnlyMessage }} <br />
-    <template v-for="i in serverOnlyCount" :key="i">
-      {{ i }}<br />
-    </template>
+      <!-- 3. Global Inject (RPC) -->
+      <section class="card">
+        <h2>3. Global Inject (RPC)</h2>
+        <p class="desc">Fetching server data via the global <code>inject('rpc')</code> client.</p>
+        <div class="content" v-if="rpcServerInfo">
+          <p><strong>Server Host:</strong> {{ rpcServerInfo.hostname }}</p>
+          <p><strong>Server Time:</strong> {{ new Date(rpcServerInfo.time).toLocaleTimeString() }}</p>
+          <p><strong>Message:</strong> {{ rpcMessage }}</p>
+          <p><strong>Count:</strong> {{ rpcCount }}</p>
+        </div>
+        <div v-else class="loading">Loading...</div>
+      </section>
 
-    <h4>Server only (non exported) but inside clientOnly will not work because they are provate so no rpc:</h4>
-    <ClientOnly>
-      <div v-if="serverOnlyMessage">{{ serverOnlyMessage }} (ClientOnly)</div>
-      <div v-if="serverOnlyCount">Count is: {{ serverOnlyCount }} (ClientOnly)</div>
-    </ClientOnly>
-    <hr />
+      <!-- 4. Public State Hydration -->
+      <section class="card">
+        <h2>4. Public State (Exported)</h2>
+        <p class="desc">Exported variables are automatically hydrated and available everywhere.</p>
+        <div class="content">
+          <p><strong>Message:</strong> {{ publicMessage }}</p>
+          <p><strong>Items:</strong> <span v-for="i in publicItems" :key="i" class="tag">{{ i }}</span></p>
+        </div>
+        <ClientOnly>
+          <div class="client-only-box">
+            Works in ClientOnly: <strong>{{ publicMessage }}</strong>
+          </div>
+        </ClientOnly>
+      </section>
 
+      <!-- 5. Private State Hydration -->
+      <section class="card">
+        <h2>5. Private State (Unexported)</h2>
+        <p class="desc">Unexported variables hydrate for SSR templates, but remain private.</p>
+        <div class="content">
+          <p><strong>Message:</strong> {{ privateMessage }}</p>
+          <p><strong>Items:</strong> <span v-for="i in privateItems" :key="i" class="tag">{{ i }}</span></p>
+        </div>
+        <ClientOnly>
+          <div class="client-only-box error">
+            <span v-if="privateMessage">{{ privateMessage }}</span>
+            <span v-else>Fails in ClientOnly (Expected)</span>
+          </div>
+        </ClientOnly>
+      </section>
+    </div>
+
+    <!-- Comparison Table -->
     <section class="comparison">
-      <h2>Comparison: RPC Inject vs Direct Import</h2>
+      <h2>RPC Inject vs Direct Import</h2>
       <table>
         <thead>
           <tr>
@@ -135,12 +180,12 @@ console.log("client: ", clientHello)
           </tr>
           <tr>
             <td><strong>Type Safety</strong></td>
-            <td>Requires careful setup (e.g., generics)</td>
+            <td>Requires explicit generics</td>
             <td>Implicitly strong (inferred from module)</td>
           </tr>
           <tr>
             <td><strong>Use Case</strong></td>
-            <td>Large apps, dynamic calls, high convenience</td>
+            <td>Large apps, dynamic calls</td>
             <td>Small components, strict bundle sizes</td>
           </tr>
         </tbody>
@@ -150,25 +195,147 @@ console.log("client: ", clientHello)
 </template>
 
 <style scoped>
-.comparison {
-  margin-top: 2rem;
+.rendering-guide {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+  font-family: system-ui, -apple-system, sans-serif;
+  color: #333;
 }
-.comparison h2 {
+
+header {
+  margin-bottom: 3rem;
+  text-align: center;
+}
+
+header h1 {
+  font-size: 2.5rem;
+  color: #2c3e50;
+  margin-bottom: 0.5rem;
+}
+
+header p {
+  color: #666;
+  font-size: 1.1rem;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 2rem;
+  margin-bottom: 4rem;
+}
+
+.card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid #eaeaea;
+  display: flex;
+  flex-direction: column;
+}
+
+.card h2 {
   font-size: 1.25rem;
-  margin-bottom: 1rem;
+  color: #42b883;
+  margin-top: 0;
+  margin-bottom: 0.5rem;
 }
+
+.desc {
+  font-size: 0.9rem;
+  color: #777;
+  margin-bottom: 1.5rem;
+  line-height: 1.4;
+}
+
+.content {
+  background: #f8f9fa;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  flex-grow: 1;
+}
+
+.content p {
+  margin: 0.5rem 0;
+  font-size: 0.95rem;
+}
+
+.tag {
+  display: inline-block;
+  background: #e2e8f0;
+  padding: 2px 8px;
+  border-radius: 4px;
+  margin-right: 4px;
+  font-size: 0.85rem;
+}
+
+.loading {
+  color: #999;
+  font-style: italic;
+  padding: 1rem;
+}
+
+.client-only-badge {
+  background: #e6f6ff;
+  color: #0066cc;
+  padding: 0.75rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  text-align: center;
+  border: 1px dashed #b3d9ff;
+}
+
+.client-only-box {
+  background: #f0fdf4;
+  color: #166534;
+  padding: 0.75rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  text-align: center;
+  border: 1px dashed #bbf7d0;
+}
+
+.client-only-box.error {
+  background: #fef2f2;
+  color: #991b1b;
+  border-color: #fecaca;
+}
+
+.comparison {
+  background: #fff;
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  border: 1px solid #eaeaea;
+}
+
+.comparison h2 {
+  color: #2c3e50;
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
-  margin-bottom: 2rem;
 }
+
 th, td {
-  border: 1px solid #ddd;
-  padding: 8px 12px;
+  padding: 1rem;
   text-align: left;
+  border-bottom: 1px solid #eaeaea;
 }
+
 th {
-  background-color: #f4f4f4;
-  font-weight: bold;
+  background-color: #f8f9fa;
+  font-weight: 600;
+  color: #444;
+}
+
+tr:last-child td {
+  border-bottom: none;
 }
 </style>
