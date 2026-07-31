@@ -68,7 +68,10 @@ export const ${fnName} = async (...args: any[]) => {
   return res
 }
 `).join('\n')
-    fs.writeFileSync(stubPath, code)
+    const currentCode = fs.existsSync(stubPath) ? fs.readFileSync(stubPath, 'utf-8') : ''
+    if (currentCode !== code) {
+      fs.writeFileSync(stubPath, code)
+    }
   }
 
   function pathToRoute(filePath: string, root: string): string {
@@ -113,7 +116,10 @@ export const ${fnName} = async (...args: any[]) => {
     for (const [filePath, serverCode] of serverCodeMap.entries()) {
       const moduleName = `_server_module_${moduleIndex++}`
       const modulePath = path.resolve(outDir, `${moduleName}.ts`)
-      fs.writeFileSync(modulePath, serverCode)
+      const currentModuleCode = fs.existsSync(modulePath) ? fs.readFileSync(modulePath, 'utf-8') : ''
+      if (currentModuleCode !== serverCode) {
+        fs.writeFileSync(modulePath, serverCode)
+      }
 
       // Collect which exports come from this module
       const exportRegex = /export\s+(?:(?:async\s+)?function\s+|(?:const|let|var)\s+)([a-zA-Z0-9_]+)/g
@@ -137,9 +143,19 @@ export const ${fnName} = async (...args: any[]) => {
     }
 
     // Write a registry that re-exports from all modules for RPC
-    fs.writeFileSync(registryPath, reExports.join('\n') + '\n')
+    const registryCode = reExports.join('\n') + '\n'
+    const currentRegistryCode = fs.existsSync(registryPath) ? fs.readFileSync(registryPath, 'utf-8') : ''
+    if (currentRegistryCode !== registryCode) {
+      fs.writeFileSync(registryPath, registryCode)
+    }
+    
     // Write API registry
-    fs.writeFileSync(path.resolve(outDir, 'script-server-api.ts'), apiReExports.join('\n') + '\n')
+    const apiCode = apiReExports.join('\n') + '\n'
+    const apiPath = path.resolve(outDir, 'script-server-api.ts')
+    const currentApiCode = fs.existsSync(apiPath) ? fs.readFileSync(apiPath, 'utf-8') : ''
+    if (currentApiCode !== apiCode) {
+      fs.writeFileSync(apiPath, apiCode)
+    }
   }
 
   return {
