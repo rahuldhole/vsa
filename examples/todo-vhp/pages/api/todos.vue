@@ -58,9 +58,3 @@ export async function DELETE(event) {
   return { success: false, error: 'ID required' }
 }
 </script>
-
-<template> 
-  <div>
-    Todos
-  </div>
-</template>

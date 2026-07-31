@@ -196,14 +196,26 @@ export const ${fnName} = async (...args: any[]) => {
               const result = await handlers[method]({ req, res, method, path: urlPath })
               
               if (result !== undefined) {
+                if (result instanceof Response) {
+                  // Forward standard Web Response headers and status
+                  result.headers.forEach((value, key) => {
+                    res.setHeader(key, value)
+                  })
+                  res.statusCode = result.status
+                  
+                  const arrayBuffer = await result.arrayBuffer()
+                  res.end(Buffer.from(arrayBuffer))
+                  return
+                }
+                
                 if (result instanceof Buffer) {
-                  res.setHeader('Content-Type', 'application/octet-stream')
+                  if (!res.hasHeader('Content-Type')) res.setHeader('Content-Type', 'application/octet-stream')
                   res.end(result)
                 } else if (typeof result === 'object' && result !== null) {
-                  res.setHeader('Content-Type', 'application/json')
+                  if (!res.hasHeader('Content-Type')) res.setHeader('Content-Type', 'application/json')
                   res.end(JSON.stringify(result))
                 } else {
-                  res.setHeader('Content-Type', 'text/html')
+                  if (!res.hasHeader('Content-Type')) res.setHeader('Content-Type', 'text/html')
                   res.end(String(result))
                 }
                 return
@@ -296,6 +308,12 @@ export const ${fnName} = async (...args: any[]) => {
       // Remove the <script server> block from the Vue SFC
       const s = new MagicString(code)
       s.remove(match.index!, match.index! + match[0].length)
+
+      // If the file lacks a template (e.g. it was an API-only file), Vue compiler will complain.
+      // We automatically inject an empty template to appease it.
+      if (!/<template[\s\S]*?>/.test(s.toString())) {
+        s.append('\n<template></template>\n')
+      }
 
       return {
         code: s.toString(),
