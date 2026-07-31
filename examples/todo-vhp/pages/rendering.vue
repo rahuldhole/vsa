@@ -60,6 +60,12 @@ console.log("client: ", clientHello)
       {{ clientHello }} <br />
     </template>
     <br />
+    <h2>1.5. ClientOnly Component</h2>
+    <ClientOnly>
+      <div>This text and block is wrapped in <code>&lt;ClientOnly&gt;</code>.</div>
+      <div v-if="clientInfo">{{ clientInfo.browser }} (ClientOnly)</div>
+    </ClientOnly>
+    <br />
     <h2>2. Server Side Data Hydration Illusion (Direct Import)</h2>
     <template v-if="getServerInfo">
       {{ getServerInfo.hostname }} <br />

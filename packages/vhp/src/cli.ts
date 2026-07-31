@@ -71,7 +71,7 @@ const dev = defineCommand({
     // causes Vite's HTML proxy mechanism to fail with empty MIME types.
     const clientEntryPath = path.resolve(outDir, 'client-entry.ts')
     const clientEntryCode = `
-import { createApp, ref, defineComponent, defineAsyncComponent, h } from 'vue'
+import { createApp, ref, defineComponent, defineAsyncComponent, h, onMounted } from 'vue'
 globalThis.definePageRender = () => {};
 ${importLine}
 import * as rpc from '#script-server'
@@ -153,9 +153,21 @@ const VhpLink = defineComponent({
     }, slots.default ? slots.default() : [])
   }
 })
+
+const ClientOnly = defineComponent({
+  setup(props, { slots }) {
+    const isMounted = ref(false)
+    onMounted(() => {
+      isMounted.value = true
+    })
+    return () => isMounted.value && slots.default ? slots.default() : null
+  }
+})
+
 const app = createApp(rootComponent)
 app.component('VhpPage', VhpPage)
 app.component('VhpLink', VhpLink)
+app.component('ClientOnly', ClientOnly)
 app.provide('rpc', rpc)
 if (typeof window !== 'undefined') {
   app.mount('#app')
@@ -360,7 +372,7 @@ const build = defineCommand({
   <body>
     <div id="app"></div>
     <script type="module">
-      import { createApp, ref, defineComponent, defineAsyncComponent, h } from 'vue'
+      import { createApp, ref, defineComponent, defineAsyncComponent, h, onMounted } from 'vue'
       globalThis.definePageRender = () => {};
       ${importLine}
       import * as rpc from '#script-server'
@@ -440,9 +452,21 @@ const build = defineCommand({
           }, slots.default ? slots.default() : [])
         }
       })
+      
+      const ClientOnly = defineComponent({
+        setup(props, { slots }) {
+          const isMounted = ref(false)
+          onMounted(() => {
+            isMounted.value = true
+          })
+          return () => isMounted.value && slots.default ? slots.default() : null
+        }
+      })
+
       const app = createApp(rootComponent)
       app.component('VhpPage', VhpPage)
       app.component('VhpLink', VhpLink)
+      app.component('ClientOnly', ClientOnly)
       app.provide('rpc', rpc)
       if (typeof window !== 'undefined') {
         app.mount('#app')
