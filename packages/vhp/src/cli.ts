@@ -121,8 +121,12 @@ const dev = defineCommand({
             if (comp) return h(comp)
             
             // Directory listing fallback
-            if (path === '/') {
-              const routeLinks = Object.keys(routes).map(r => 
+            const prefix = path === '/' ? '/' : path + '/'
+            const childRoutes = Object.keys(routes).filter(r => 
+              r.startsWith(prefix) && r !== path
+            )
+            if (childRoutes.length > 0) {
+              const routeLinks = childRoutes.map(r => 
                 h('li', {}, h('a', { 
                   href: r, 
                   onClick: (e) => { e.preventDefault(); window.navigate(r) },
@@ -130,8 +134,8 @@ const dev = defineCommand({
                 }, r))
               )
               return h('div', { style: 'padding: 2rem; font-family: sans-serif;' }, [
-                h('h2', {}, 'Index of /'),
-                h('p', { style: 'color: #666;' }, 'No index page found. Showing registered routes:'),
+                h('h2', {}, 'Index of ' + path),
+                h('p', { style: 'color: #666;' }, 'No index page found. Showing nested routes:'),
                 h('ul', { style: 'list-style-type: disc; padding-left: 20px;' }, routeLinks)
               ])
             }
@@ -317,8 +321,12 @@ const build = defineCommand({
             if (comp) return h(comp)
             
             // Directory listing fallback
-            if (path === '/') {
-              const routeLinks = Object.keys(routes).map(r => 
+            const prefix = path === '/' ? '/' : path + '/'
+            const childRoutes = Object.keys(routes).filter(r => 
+              r.startsWith(prefix) && r !== path
+            )
+            if (childRoutes.length > 0) {
+              const routeLinks = childRoutes.map(r => 
                 h('li', {}, h('a', { 
                   href: r, 
                   onClick: (e) => { e.preventDefault(); window.navigate(r) },
@@ -326,8 +334,8 @@ const build = defineCommand({
                 }, r))
               )
               return h('div', { style: 'padding: 2rem; font-family: sans-serif;' }, [
-                h('h2', {}, 'Index of /'),
-                h('p', { style: 'color: #666;' }, 'No index page found. Showing registered routes:'),
+                h('h2', {}, 'Index of ' + path),
+                h('p', { style: 'color: #666;' }, 'No index page found. Showing nested routes:'),
                 h('ul', { style: 'list-style-type: disc; padding-left: 20px;' }, routeLinks)
               ])
             }
