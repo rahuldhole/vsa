@@ -8,10 +8,10 @@ export const serverInfo = async () => {
   }
 }
 
-const serverHello = "hello from vhp server"
-const count = 5;
-const serverOnlyMessage = "hello from vhp server only"
-const serverOnlyCount = 10;
+export const serverHello = "hello from vhp server"
+export const count = 5;
+export const serverOnlyMessage = "hello from vhp server only"
+export const serverOnlyCount = 10
 
 console.log("server-only-message: ", serverOnlyMessage)
 
@@ -76,7 +76,7 @@ console.log("client: ", clientHello)
     </template>
 
     <h2>4. Server Side SSR Rendered</h2>
-      {{ serverOnlyMessage }}
+      {{  serverOnlyMessage }} <br />
       <template v-for="i in serverOnlyCount" :key="i">
         {{ i }}<br />
       </template>

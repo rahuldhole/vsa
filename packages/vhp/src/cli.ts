@@ -65,6 +65,108 @@ const dev = defineCommand({
     const isMultipage = !entry || entry.startsWith('index.')
     const importLine = entry ? `import App from '/${entry}'` : `const App = null`
 
+    // Write the client entry module to a real file so Vite serves it
+    // through its normal transform pipeline with correct MIME types.
+    // Using inline <script type="module"> in dynamically generated HTML
+    // causes Vite's HTML proxy mechanism to fail with empty MIME types.
+    const clientEntryPath = path.resolve(outDir, 'client-entry.ts')
+    const clientEntryCode = `
+import { createApp, ref, defineComponent, defineAsyncComponent, h } from 'vue'
+globalThis.definePageRender = () => {};
+${importLine}
+import * as rpc from '#script-server'
+
+const currentPath = ref(typeof window !== 'undefined' ? window.location.pathname : '/')
+if (typeof window !== 'undefined') {
+  window.addEventListener('popstate', () => {
+    currentPath.value = window.location.pathname
+  })
+  window.navigate = (path) => {
+    window.history.pushState({}, '', path)
+    currentPath.value = path
+  }
+}
+
+const VhpPage = defineComponent({
+  setup() {
+    const pages = import.meta.glob(${globPattern})
+    const routes = {}
+    for (const path in pages) {
+      if (path.includes('/_') || path.includes('/.')) continue
+      // If using App.vue layout, exclude it from routing to prevent infinite loop
+      if (path.endsWith('/App.vue') || path.endsWith('/App.x.vue') || path.endsWith('/App.vhp') || path.endsWith('/App.vsa')) continue
+      let routePath = path
+        .replace('${routePrefix}', '')
+        .replace(/\\.(vue|x\\.vue|vhp|vsa)$/i, '')
+        .replace(/(^|\\/)index$/i, '')
+      if (!routePath.startsWith('/')) {
+        routePath = '/' + routePath
+      }
+      if (routePath === '') routePath = '/'
+      routes[routePath] = defineAsyncComponent(pages[path])
+    }
+    return () => {
+      let path = currentPath.value
+      if (path.endsWith('/') && path.length > 1) path = path.slice(0, -1)
+      const comp = routes[path]
+      if (comp) return h(comp)
+      
+      // Directory listing fallback
+      const prefix = path === '/' ? '/' : path + '/'
+      const childRoutes = Object.keys(routes).filter(r => 
+        r.startsWith(prefix) && r !== path
+      )
+      if (childRoutes.length > 0) {
+        const routeLinks = childRoutes.map(r => 
+          h('li', {}, h('a', { 
+            href: r, 
+            onClick: (e) => { e.preventDefault(); window.navigate(r) },
+            style: 'color: #42b983; text-decoration: none; font-size: 1.1rem; line-height: 2;'
+          }, r))
+        )
+        return h('div', { style: 'padding: 2rem; font-family: sans-serif;' }, [
+          h('h2', {}, 'Index of ' + path),
+          h('p', { style: 'color: #666;' }, 'No index page found. Showing nested routes:'),
+          h('ul', { style: 'list-style-type: disc; padding-left: 20px;' }, routeLinks)
+        ])
+      }
+      
+      return h('div', { class: 'vhp-not-found' }, '404: Route not found')
+    }
+  }
+})
+
+const useMultipage = ${isMultipage}
+const rootComponent = useMultipage ? VhpPage : App
+
+const VhpLink = defineComponent({
+  props: {
+    to: { type: String, required: true }
+  },
+  setup(props, { slots }) {
+    return () => h('a', {
+      href: props.to,
+      onClick: (e) => {
+        e.preventDefault()
+        window.navigate(props.to)
+      }
+    }, slots.default ? slots.default() : [])
+  }
+})
+const app = createApp(rootComponent)
+app.component('VhpPage', VhpPage)
+app.component('VhpLink', VhpLink)
+app.provide('rpc', rpc)
+if (typeof window !== 'undefined') {
+  app.mount('#app')
+}
+export { app }
+`
+    if (!fs.existsSync(outDir)) {
+      fs.mkdirSync(outDir, { recursive: true })
+    }
+    fs.writeFileSync(clientEntryPath, clientEntryCode)
+
     const htmlPlugin = () => {
       return {
         name: 'vsa-html-fallback',
@@ -83,118 +185,26 @@ const dev = defineCommand({
   </head>
   <body>
     <div id="app"></div>
-    <script type="module">
-      import { createApp, ref, defineComponent, defineAsyncComponent, h } from 'vue'
-      globalThis.definePageRender = () => {};
-      ${importLine}
-      import * as rpc from '#script-server'
-      
-      const currentPath = ref(typeof window !== 'undefined' ? window.location.pathname : '__VHP_SSR_PATH__')
-      if (typeof window !== 'undefined') {
-        window.addEventListener('popstate', () => {
-          currentPath.value = window.location.pathname
-        })
-        window.navigate = (path) => {
-          window.history.pushState({}, '', path)
-          currentPath.value = path
-        }
-      }
-
-      const VhpPage = defineComponent({
-        setup() {
-          const pages = import.meta.glob(${globPattern})
-          const routes = {}
-          for (const path in pages) {
-            if (path.includes('/_') || path.includes('/.')) continue
-            // If using App.vue layout, exclude it from routing to prevent infinite loop
-            if (path.endsWith('/App.vue') || path.endsWith('/App.x.vue') || path.endsWith('/App.vhp') || path.endsWith('/App.vsa')) continue
-            let routePath = path
-              .replace('${routePrefix}', '')
-              .replace(/\\.(vue|x\\.vue|vhp|vsa)$/i, '')
-              .replace(/(^|\\/)index$/i, '')
-            if (!routePath.startsWith('/')) {
-              routePath = '/' + routePath
-            }
-            if (routePath === '') routePath = '/'
-            routes[routePath] = defineAsyncComponent(pages[path])
-          }
-          return () => {
-            let path = currentPath.value
-            if (path.endsWith('/') && path.length > 1) path = path.slice(0, -1)
-            const comp = routes[path]
-            if (comp) return h(comp)
-            
-            // Directory listing fallback
-            const prefix = path === '/' ? '/' : path + '/'
-            const childRoutes = Object.keys(routes).filter(r => 
-              r.startsWith(prefix) && r !== path
-            )
-            if (childRoutes.length > 0) {
-              const routeLinks = childRoutes.map(r => 
-                h('li', {}, h('a', { 
-                  href: r, 
-                  onClick: (e) => { e.preventDefault(); window.navigate(r) },
-                  style: 'color: #42b983; text-decoration: none; font-size: 1.1rem; line-height: 2;'
-                }, r))
-              )
-              return h('div', { style: 'padding: 2rem; font-family: sans-serif;' }, [
-                h('h2', {}, 'Index of ' + path),
-                h('p', { style: 'color: #666;' }, 'No index page found. Showing nested routes:'),
-                h('ul', { style: 'list-style-type: disc; padding-left: 20px;' }, routeLinks)
-              ])
-            }
-            
-            return h('div', { class: 'vhp-not-found' }, '404: Route not found')
-          }
-        }
-      })
-      
-      const useMultipage = ${isMultipage}
-      const rootComponent = useMultipage ? VhpPage : App
-      
-      const VhpLink = defineComponent({
-        props: {
-          to: { type: String, required: true }
-        },
-        setup(props, { slots }) {
-          return () => h('a', {
-            href: props.to,
-            onClick: (e) => {
-              e.preventDefault()
-              window.navigate(props.to)
-            }
-          }, slots.default ? slots.default() : [])
-        }
-      })
-      const app = createApp(rootComponent)
-      app.component('VhpPage', VhpPage)
-      app.component('VhpLink', VhpLink)
-      app.provide('rpc', rpc)
-      if (typeof window !== 'undefined') {
-        app.mount('#app')
-      }
-      export { app }
-    </script>
+    <script type="module" src="/.vhp/client-entry.ts"></script>
   </body>
 </html>
               `
 
-              let requiresSsr = true;
+              let requiresSsr = false;
               let requestPath = req.url.split('?')[0];
               if (requestPath === '/') requestPath = '/index';
               const searchBase = hasPagesDir ? path.resolve(cwd, 'pages') : cwd;
               const possiblePaths = [
                 path.resolve(searchBase, requestPath.slice(1) + '.vue'),
-                path.resolve(searchBase, requestPath.slice(1) + '.vhp')
+                path.resolve(searchBase, requestPath.slice(1) + '.vhp'),
+                path.resolve(searchBase, requestPath.slice(1) + '.vsa'),
+                path.resolve(searchBase, requestPath.slice(1) + '.x.vue')
               ];
               for (const p of possiblePaths) {
                 if (fs.existsSync(p)) {
-                  const content = fs.readFileSync(p, 'utf-8');
-                  if (content.includes("definePageRender('ssr')")) {
-                    requiresSsr = true;
-                    console.log('Detected SSR route:', p);
-                    break;
-                  }
+                  requiresSsr = true;
+                  console.log('Detected SSR route:', p);
+                  break;
                 }
               }
               console.log('SSR Check for', requestPath, 'requiresSsr:', requiresSsr);
@@ -202,9 +212,10 @@ const dev = defineCommand({
               if (requiresSsr) {
                 try {
                   const serverEntryPath = path.resolve(outDir, 'server-entry.ts');
-                  // We extract the script content to load it via Vite
-                  const scriptContent = html.match(/<script type="module">([\s\S]*?)<\/script>/)?.[1] || '';
-                  const serverCode = 'globalThis.definePageRender = () => {};\n' + scriptContent.replace('__VHP_SSR_PATH__', requestPath);
+                  const serverCode = 'globalThis.definePageRender = () => {};\n' + clientEntryCode.replace(
+                    "typeof window !== 'undefined' ? window.location.pathname : '/'",
+                    `'${requestPath}'`
+                  );
                   fs.writeFileSync(serverEntryPath, serverCode);
                   
                   const mod = await server.ssrLoadModule(serverEntryPath);
@@ -479,12 +490,13 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'Missing functionName' })
   }
 
-  if (typeof registry[functionName] !== 'function') {
-    throw createError({ statusCode: 500, statusMessage: \`Function \${functionName} is not exported from <script server>\` })
+  if (registry[functionName] === undefined) {
+    throw createError({ statusCode: 500, statusMessage: \`Export \${functionName} is not found in <script server>\` })
   }
 
   try {
-    const result = await registry[functionName](...(args || []))
+    const exportedValue = registry[functionName]
+    const result = typeof exportedValue === 'function' ? await exportedValue(...(args || [])) : exportedValue
     return result
   } catch (err: any) {
     console.error('Script Server Error:', err)
@@ -496,6 +508,27 @@ export default defineEventHandler(async (event) => {
 })
 `
     fs.writeFileSync(handlerPath, handlerCode)
+
+    const pageHandlerPath = path.resolve(outDir, 'nitro-page-handler.ts')
+    const pageHandlerCode = `
+import { defineEventHandler } from 'h3'
+import fs from 'node:fs'
+import path from 'node:path'
+
+export default defineEventHandler((event) => {
+  const url = event.node.req.url || ''
+  if (url.includes('.')) {
+    return
+  }
+  const publicDir = path.resolve(process.cwd(), '.output/public')
+  const indexPath = path.resolve(publicDir, 'index.html')
+  if (fs.existsSync(indexPath)) {
+    event.node.res.setHeader('content-type', 'text/html; charset=utf-8')
+    return fs.readFileSync(indexPath, 'utf-8')
+  }
+})
+`
+    fs.writeFileSync(pageHandlerPath, pageHandlerCode)
 
     // 3. Build Nitro Server
     console.log('Building Nitro server...')
@@ -518,6 +551,10 @@ export default defineEventHandler(async (event) => {
         {
           route: '/__script_server_rpc',
           handler: handlerPath
+        },
+        {
+          route: '/**',
+          handler: pageHandlerPath
         }
       ]
     })

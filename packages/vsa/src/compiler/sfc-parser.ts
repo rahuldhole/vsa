@@ -275,13 +275,14 @@ export const ${fnName} = async (...args: any[]) => {
             // Using Vite's ssrLoadModule to evaluate the file with ES modules support
             const registry = await server.ssrLoadModule(registryPath)
 
-            if (typeof registry[functionName] !== 'function') {
+            if (registry[functionName] === undefined) {
               res.statusCode = 500
-              res.end(JSON.stringify({ error: `Function ${functionName} is not exported from <script server>` }))
+              res.end(JSON.stringify({ error: `Export ${functionName} is not found in <script server>` }))
               return
             }
 
-            const result = await registry[functionName](...(args || []))
+            const exportedValue = registry[functionName]
+            const result = typeof exportedValue === 'function' ? await exportedValue(...(args || [])) : exportedValue
             res.setHeader('Content-Type', 'application/json')
             res.end(JSON.stringify(result))
 
@@ -294,7 +295,7 @@ export const ${fnName} = async (...args: any[]) => {
       })
     },
 
-    transform(code: string, id: string) {
+    transform(code: string, id: string, options?: { ssr?: boolean }) {
       const cleanId = id.split('?')[0]
       if (!cleanId.endsWith('.vue') && !cleanId.endsWith('.vhp') && !cleanId.endsWith('.x.vue') && !cleanId.endsWith('.vsa')) return null
 
@@ -324,6 +325,43 @@ export const ${fnName} = async (...args: any[]) => {
       // Remove the <script server> block from the Vue SFC
       const s = new MagicString(code)
       s.remove(match.index!, match.index! + match[0].length)
+
+      if (options?.ssr) {
+        // Strip 'export ' so it doesn't break <script setup> compilation
+        const injectCode = serverCode.replace(/export\s+/g, '')
+        const setupMatch = code.match(/<script\s+setup[^>]*>/)
+        if (setupMatch) {
+          s.appendRight(setupMatch.index! + setupMatch[0].length, '\n' + injectCode + '\n')
+        } else {
+          s.prepend('<script setup>\n' + injectCode + '\n</script>\n')
+        }
+      } else {
+        // Mock server-only variables on client so Vue doesn't complain during hydration
+        const varRegex = /(?:const|let|var)\s+([a-zA-Z0-9_]+)/g
+        const funcRegex = /function\s+([a-zA-Z0-9_]+)/g
+        
+        let clientMocks = ''
+        let m2
+        while ((m2 = varRegex.exec(serverCode)) !== null) {
+          if (!exportedFunctions.includes(m2[1])) {
+             clientMocks += `const ${m2[1]} = undefined;\n`
+          }
+        }
+        while ((m2 = funcRegex.exec(serverCode)) !== null) {
+          if (!exportedFunctions.includes(m2[1])) {
+             clientMocks += `const ${m2[1]} = () => {};\n`
+          }
+        }
+        
+        if (clientMocks) {
+          const setupMatch = code.match(/<script\s+setup[^>]*>/)
+          if (setupMatch) {
+            s.appendRight(setupMatch.index! + setupMatch[0].length, '\n' + clientMocks + '\n')
+          } else {
+            s.prepend('<script setup>\n' + clientMocks + '\n</script>\n')
+          }
+        }
+      }
 
       // If the file lacks a template (e.g. it was an API-only file), Vue compiler will complain.
       // We automatically inject an empty template to appease it.
