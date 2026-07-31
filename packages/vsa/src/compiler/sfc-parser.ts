@@ -23,7 +23,7 @@ export const ViteScriptServerPlugin = (options: ScriptServerOptions = {}): any =
         if (!file.startsWith('.') && file !== 'node_modules') {
           scanDir(fullPath)
         }
-      } else if (fullPath.endsWith('.vue')) {
+      } else if (fullPath.endsWith('.vue') || fullPath.endsWith('.vhp') || fullPath.endsWith('.x.vue') || fullPath.endsWith('.vsa')) {
         const code = fs.readFileSync(fullPath, 'utf-8')
         const match = code.match(/<script\s+server>([\s\S]*?)<\/script>/)
         if (match) {
@@ -179,7 +179,7 @@ export const ${fnName} = async (...args: any[]) => {
     },
 
     transform(code: string, id: string) {
-      if (!id.endsWith('.vue')) return null
+      if (!id.endsWith('.vue') && !id.endsWith('.vhp') && !id.endsWith('.x.vue') && !id.endsWith('.vsa')) return null
 
       // Use a simple regex to find the <script server> block
       const match = code.match(/<script\s+server>([\s\S]*?)<\/script>/)

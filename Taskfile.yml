@@ -2,52 +2,32 @@ version: '3'
 
 tasks:
   default:
-    desc: "Welcome! Run 'task --list' to see all available tasks and the order to run them."
+    desc: "Welcome! Run 'task --list' to see all available tasks."
     cmds:
       - task --list
 
   install:
-    desc: "Step 1: Install all required dependencies."
+    desc: "Step 1: Install all required dependencies across the workspace."
     cmds:
       - pnpm install
-      - cd examples/playground-vite && pnpm install
-
-  dev:prepare:
-    desc: "Step 2: Prepare the Nuxt playground."
-    cmds:
-      - pnpm run dev:prepare
-
-  dev:
-    desc: "Step 3: Start the Nuxt playground server. This spins up the app so you can test the VSA module."
-    cmds:
-      - pnpm run dev
-
-  dev:vite:
-    desc: "Step 4: Start the Vite playground server."
-    cmds:
-      - cd examples/playground-vite && pnpm run dev
-
-  lint:
-    desc: "Step 5: Lint your code."
-    cmds:
-      - pnpm run lint
 
   build:
-    desc: "Step 6: Build the module."
+    desc: "Step 2: Build the core @rahuldhole/vsa package and vhp CLI."
     cmds:
-      - pnpm run build
+      - pnpm --filter @rahuldhole/vsa --filter vhp run build
 
-  dev:build:
-    desc: "Step 7: Build the Nuxt playground application."
+  dev:todo-vhp:
+    desc: "Step 3: Start the single-file todo-vhp example using the vhp CLI."
     cmds:
-      - pnpm run dev:build
+      - cd examples/todo-vhp && node ../../packages/vhp/dist/cli.mjs dev
 
   dev:todo-nuxt:
-    desc: "Step 8: Start the Nuxt todo list example."
+    desc: "Step 4: Start the Nuxt todo list example."
     cmds:
-      - cd examples/todo-list-nuxt && pnpm install && pnpm run dev
+      - cd examples/todo-list-nuxt && pnpm run dev
 
   dev:todo-vue:
-    desc: "Step 9: Start the Vite todo list example."
+    desc: "Step 5: Start the Vite todo list example."
     cmds:
-      - cd examples/todo-list-vue && pnpm install && pnpm run dev
+      - cd examples/todo-list-vue && pnpm run dev
+

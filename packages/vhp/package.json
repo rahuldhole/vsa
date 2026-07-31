@@ -1,0 +1,22 @@
+{
+  "name": "vhp",
+  "version": "0.0.1",
+  "description": "Vue Server Actions CLI Framework",
+  "type": "module",
+  "bin": {
+    "vhp": "./dist/cli.mjs"
+  },
+  "scripts": {
+    "build": "unbuild"
+  },
+  "dependencies": {
+    "@rahuldhole/vsa": "workspace:*",
+    "@vitejs/plugin-vue": "^6.0.8",
+    "citty": "^0.2.2",
+    "vite": "^8.1.5",
+    "vue": "^3.5.40"
+  },
+  "devDependencies": {
+    "unbuild": "^3.6.1"
+  }
+}

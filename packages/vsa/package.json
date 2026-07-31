@@ -1,0 +1,33 @@
+{
+  "name": "@rahuldhole/vsa",
+  "version": "0.0.1",
+  "description": "Vue Server Actions Plugin",
+  "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/module.mjs",
+      "require": "./dist/module.cjs"
+    }
+  },
+  "main": "./dist/module.cjs",
+  "types": "./dist/module.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "unbuild"
+  },
+  "dependencies": {
+    "@nuxt/kit": "^3.12.3",
+    "@nuxt/schema": "^3.12.3",
+    "@vue/compiler-sfc": "^3.4.31",
+    "magic-string": "^0.30.10"
+  },
+  "devDependencies": {
+    "nuxt": "^3.12.3",
+    "unbuild": "^3.6.1"
+  }
+}
