@@ -35,12 +35,21 @@ const dev = defineCommand({
     let entry = args.entry
     // Fallbacks
     if (!entry) {
-      if (fs.existsSync(path.resolve(cwd, 'App.vhp'))) entry = 'App.vhp'
-      else if (fs.existsSync(path.resolve(cwd, 'index.vhp'))) entry = 'index.vhp'
-      else if (fs.existsSync(path.resolve(cwd, 'App.x.vue'))) entry = 'App.x.vue'
-      else if (fs.existsSync(path.resolve(cwd, 'index.x.vue'))) entry = 'index.x.vue'
-      else if (fs.existsSync(path.resolve(cwd, 'App.vue'))) entry = 'App.vue'
-      else if (fs.existsSync(path.resolve(cwd, 'index.vue'))) entry = 'index.vue'
+      const files = fs.existsSync(cwd) ? fs.readdirSync(cwd) : []
+      const findFile = (name: string) => files.find(f => f.toLowerCase() === name.toLowerCase())
+      const appVhp = findFile('App.vhp')
+      const indexVhp = findFile('index.vhp')
+      const appXVue = findFile('App.x.vue')
+      const indexXVue = findFile('index.x.vue')
+      const appVue = findFile('App.vue')
+      const indexVue = findFile('index.vue')
+      
+      if (appVhp) entry = appVhp
+      else if (indexVhp) entry = indexVhp
+      else if (appXVue) entry = appXVue
+      else if (indexXVue) entry = indexXVue
+      else if (appVue) entry = appVue
+      else if (indexVue) entry = indexVue
     }
 
     if (!entry) {
@@ -52,6 +61,8 @@ const dev = defineCommand({
       ? "'/pages/**/*.{vue,x.vue,vhp,vsa}'" 
       : "['/**/*.{vue,x.vue,vhp,vsa}', '!**/node_modules/**', '!**/.vhp/**']"
     const routePrefix = hasPagesDir ? '/pages' : '/'
+    const isMultipage = !entry || entry.startsWith('index.')
+    const importLine = entry ? `import App from '/${entry}'` : `const App = null`
 
     const htmlPlugin = () => {
       return {
@@ -73,7 +84,7 @@ const dev = defineCommand({
     <div id="app"></div>
     <script type="module">
       import { createApp, ref, defineComponent, h } from 'vue'
-      import App from '/${entry}'
+      ${importLine}
       import * as rpc from '#script-server'
       
       const currentPath = ref(window.location.pathname)
@@ -91,11 +102,12 @@ const dev = defineCommand({
           const routes = {}
           for (const path in pages) {
             if (path.includes('/_') || path.includes('/.')) continue
-            if (path.endsWith('/${entry}') || path === './${entry}') continue
+            // If using App.vue layout, exclude it from routing to prevent infinite loop
+            if (path.endsWith('/App.vue') || path.endsWith('/App.x.vue') || path.endsWith('/App.vhp') || path.endsWith('/App.vsa')) continue
             let routePath = path
               .replace('${routePrefix}', '')
-              .replace(/\\.(vue|x\\.vue|vhp|vsa)$/, '')
-              .replace(/\\/index$/, '')
+              .replace(/\\.(vue|x\\.vue|vhp|vsa)$/i, '')
+              .replace(/(^|\\/)index$/i, '')
             if (!routePath.startsWith('/')) {
               routePath = '/' + routePath
             }
@@ -106,12 +118,33 @@ const dev = defineCommand({
             let path = currentPath.value
             if (path.endsWith('/') && path.length > 1) path = path.slice(0, -1)
             const comp = routes[path]
-            return comp ? h(comp) : h('div', { class: 'vhp-not-found' }, '404: Route not found')
+            if (comp) return h(comp)
+            
+            // Directory listing fallback
+            if (path === '/') {
+              const routeLinks = Object.keys(routes).map(r => 
+                h('li', {}, h('a', { 
+                  href: r, 
+                  onClick: (e) => { e.preventDefault(); window.navigate(r) },
+                  style: 'color: #42b983; text-decoration: none; font-size: 1.1rem; line-height: 2;'
+                }, r))
+              )
+              return h('div', { style: 'padding: 2rem; font-family: sans-serif;' }, [
+                h('h2', {}, 'Index of /'),
+                h('p', { style: 'color: #666;' }, 'No index page found. Showing registered routes:'),
+                h('ul', { style: 'list-style-type: disc; padding-left: 20px;' }, routeLinks)
+              ])
+            }
+            
+            return h('div', { class: 'vhp-not-found' }, '404: Route not found')
           }
         }
       })
       
-      const app = createApp(App)
+      const useMultipage = ${isMultipage}
+      const rootComponent = useMultipage ? VhpPage : App
+      
+      const app = createApp(rootComponent)
       app.component('VhpPage', VhpPage)
       app.provide('rpc', rpc)
       app.mount('#app')
@@ -180,12 +213,21 @@ const build = defineCommand({
     let entry = args.entry
     // Fallbacks
     if (!entry) {
-      if (fs.existsSync(path.resolve(cwd, 'App.vhp'))) entry = 'App.vhp'
-      else if (fs.existsSync(path.resolve(cwd, 'index.vhp'))) entry = 'index.vhp'
-      else if (fs.existsSync(path.resolve(cwd, 'App.x.vue'))) entry = 'App.x.vue'
-      else if (fs.existsSync(path.resolve(cwd, 'index.x.vue'))) entry = 'index.x.vue'
-      else if (fs.existsSync(path.resolve(cwd, 'App.vue'))) entry = 'App.vue'
-      else if (fs.existsSync(path.resolve(cwd, 'index.vue'))) entry = 'index.vue'
+      const files = fs.existsSync(cwd) ? fs.readdirSync(cwd) : []
+      const findFile = (name: string) => files.find(f => f.toLowerCase() === name.toLowerCase())
+      const appVhp = findFile('App.vhp')
+      const indexVhp = findFile('index.vhp')
+      const appXVue = findFile('App.x.vue')
+      const indexXVue = findFile('index.x.vue')
+      const appVue = findFile('App.vue')
+      const indexVue = findFile('index.vue')
+      
+      if (appVhp) entry = appVhp
+      else if (indexVhp) entry = indexVhp
+      else if (appXVue) entry = appXVue
+      else if (indexXVue) entry = indexXVue
+      else if (appVue) entry = appVue
+      else if (indexVue) entry = indexVue
     }
 
     if (!entry) {
@@ -197,6 +239,8 @@ const build = defineCommand({
       ? "'/pages/**/*.{vue,x.vue,vhp,vsa}'" 
       : "['/**/*.{vue,x.vue,vhp,vsa}', '!**/node_modules/**', '!**/.vhp/**']"
     const routePrefix = hasPagesDir ? '/pages' : '/'
+    const isMultipage = !entry || entry.startsWith('index.')
+    const importLine = entry ? `import App from '/${entry}'` : `const App = null`
 
     // 1. Build Client
     console.log('Building client...')
@@ -236,7 +280,7 @@ const build = defineCommand({
     <div id="app"></div>
     <script type="module">
       import { createApp, ref, defineComponent, h } from 'vue'
-      import App from '/${entry}'
+      ${importLine}
       import * as rpc from '#script-server'
       
       const currentPath = ref(window.location.pathname)
@@ -254,11 +298,12 @@ const build = defineCommand({
           const routes = {}
           for (const path in pages) {
             if (path.includes('/_') || path.includes('/.')) continue
-            if (path.endsWith('/${entry}') || path === './${entry}') continue
+            // If using App.vue layout, exclude it from routing to prevent infinite loop
+            if (path.endsWith('/App.vue') || path.endsWith('/App.x.vue') || path.endsWith('/App.vhp') || path.endsWith('/App.vsa')) continue
             let routePath = path
               .replace('${routePrefix}', '')
-              .replace(/\\.(vue|x\\.vue|vhp|vsa)$/, '')
-              .replace(/\\/index$/, '')
+              .replace(/\\.(vue|x\\.vue|vhp|vsa)$/i, '')
+              .replace(/(^|\\/)index$/i, '')
             if (!routePath.startsWith('/')) {
               routePath = '/' + routePath
             }
@@ -269,12 +314,33 @@ const build = defineCommand({
             let path = currentPath.value
             if (path.endsWith('/') && path.length > 1) path = path.slice(0, -1)
             const comp = routes[path]
-            return comp ? h(comp) : h('div', { class: 'vhp-not-found' }, '404: Route not found')
+            if (comp) return h(comp)
+            
+            // Directory listing fallback
+            if (path === '/') {
+              const routeLinks = Object.keys(routes).map(r => 
+                h('li', {}, h('a', { 
+                  href: r, 
+                  onClick: (e) => { e.preventDefault(); window.navigate(r) },
+                  style: 'color: #42b983; text-decoration: none; font-size: 1.1rem; line-height: 2;'
+                }, r))
+              )
+              return h('div', { style: 'padding: 2rem; font-family: sans-serif;' }, [
+                h('h2', {}, 'Index of /'),
+                h('p', { style: 'color: #666;' }, 'No index page found. Showing registered routes:'),
+                h('ul', { style: 'list-style-type: disc; padding-left: 20px;' }, routeLinks)
+              ])
+            }
+            
+            return h('div', { class: 'vhp-not-found' }, '404: Route not found')
           }
         }
       })
       
-      const app = createApp(App)
+      const useMultipage = ${isMultipage}
+      const rootComponent = useMultipage ? VhpPage : App
+      
+      const app = createApp(rootComponent)
       app.component('VhpPage', VhpPage)
       app.provide('rpc', rpc)
       app.mount('#app')

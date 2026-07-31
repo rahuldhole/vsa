@@ -1,6 +1,7 @@
 import MagicString from 'magic-string'
 import fs from 'fs'
 import path from 'path'
+import process from 'node:process'
 
 export interface ScriptServerOptions {
   // Directory to write the stubs and registry (e.g. .nuxt or node_modules/.cache/script-server)
@@ -198,7 +199,7 @@ export const ${fnName} = async (...args: any[]) => {
       }
 
       // Store this file's server code in the map and write merged registry
-      serverCodeMap.set(id, serverCode)
+      serverCodeMap.set(cleanId, serverCode)
       writeServerRegistry()
 
       // Re-generate client stubs (handles HMR case)

@@ -1,9 +1,39 @@
+<script server>
+// In-memory data store for the MVP
+let todos = []
+let idCounter = 1
+
+export async function getTodos() {
+  return todos
+}
+
+export async function addTodo(text) {
+  const newTodo = { id: idCounter++, text, done: false }
+  todos.push(newTodo)
+  console.log("Added todo", newTodo)
+  return newTodo
+}
+
+export async function toggleTodo(id, done) {
+  const todo = todos.find(t => t.id === id)
+  if (todo) {
+    todo.done = done
+  }
+  return true
+}
+
+export async function deleteTodo(id) {
+  todos = todos.filter(t => t.id !== id)
+  return true
+}
+</script>
+
 <script setup>
 import { ref, onMounted, inject } from 'vue'
 import TodoItem from '../components/TodoItem.vue'
+import Navbar from '../components/Navbar.vue'
 
 const rpc = inject('rpc')
-
 const todos = ref([])
 const newTodoText = ref('')
 
@@ -34,8 +64,11 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="todo-app">
-    <h1>Todo List (.vhp)</h1>
+  <div class="layout">
+    <Navbar active="home" />
+    <main class="content">
+      <div class="todo-app">
+        <h1>Todo List (.vhp)</h1>
     <div class="input-group">
       <input 
         v-model="newTodoText" 
@@ -55,10 +88,24 @@ onMounted(() => {
       />
     </ul>
     <p v-if="todos.length === 0" class="empty">No todos yet!</p>
+      </div>
+    </main>
   </div>
 </template>
 
 <style scoped>
+.layout {
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.content {
+  display: flex;
+  justify-content: center;
+  padding: 0 1rem;
+}
+
 h1 {
   margin-top: 0;
   color: #2c3e50;
