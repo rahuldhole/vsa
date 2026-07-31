@@ -155,12 +155,18 @@ const VhpLink = defineComponent({
 })
 
 const ClientOnly = defineComponent({
-  setup(props, { slots }) {
+  name: 'ClientOnly',
+  setup(_, { slots }) {
     const isMounted = ref(false)
     onMounted(() => {
       isMounted.value = true
     })
-    return () => isMounted.value && slots.default ? slots.default() : null
+    return () => {
+      if (isMounted.value && slots.default) {
+        return slots.default()
+      }
+      return h('span', { style: 'display: none;', class: 'client-only-placeholder' })
+    }
   }
 })
 
@@ -227,11 +233,11 @@ export { app }
                   const serverCode = 'globalThis.definePageRender = () => {};\n' + clientEntryCode.replace(
                     "typeof window !== 'undefined' ? window.location.pathname : '/'",
                     `'${requestPath}'`
-                  );
+                  ) + `\nimport { renderToString } from 'vue/server-renderer';\nexport async function renderApp() { return await renderToString(app); }\n`;
                   fs.writeFileSync(serverEntryPath, serverCode);
                   
                   const mod = await server.ssrLoadModule(serverEntryPath);
-                  const appHtml = await renderToString(mod.app);
+                  const appHtml = await mod.renderApp();
                   
                   const stateHtml = `<script>window.__VHP_STATE__ = ${JSON.stringify(globalThis.__VHP_STATE__ || {})}</script>`;
                   const ssrHtml = html.replace('<div id="app"></div>', `${stateHtml}\n<div id="app">${appHtml}</div>`);
@@ -454,12 +460,18 @@ const build = defineCommand({
       })
       
       const ClientOnly = defineComponent({
-        setup(props, { slots }) {
+        name: 'ClientOnly',
+        setup(_, { slots }) {
           const isMounted = ref(false)
           onMounted(() => {
             isMounted.value = true
           })
-          return () => isMounted.value && slots.default ? slots.default() : null
+          return () => {
+            if (isMounted.value && slots.default) {
+              return slots.default()
+            }
+            return h('span', { style: 'display: none;', class: 'client-only-placeholder' })
+          }
         }
       })
 
