@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "vhp dev --dir pages",
     "build": "vhp build --dir pages",
-    "preview": "node pages/.vhp/nitro/server/index.mjs"
+    "preview": "node pages/.output/server/index.mjs"
   },
   "dependencies": {
     "vhp": "workspace:*"
