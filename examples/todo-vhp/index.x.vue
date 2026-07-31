@@ -10,6 +10,7 @@ export async function getTodos() {
 export async function addTodo(text) {
   const newTodo = { id: idCounter++, text, done: false }
   todos.push(newTodo)
+  console.log("Added todo", newTodo)
   return newTodo
 }
 
@@ -43,7 +44,6 @@ async function handleAdd() {
   if (!newTodoText.value.trim()) return
   const added = await rpc.addTodo(newTodoText.value)
   todos.value.push(added)
-  console.log("Added todo", added)
   newTodoText.value = ''
 }
 
