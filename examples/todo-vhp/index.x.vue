@@ -30,6 +30,7 @@ export async function deleteTodo(id) {
 
 <script setup>
 import { ref, onMounted, inject } from 'vue'
+import TodoItem from './components/TodoItem.vue'
 
 const rpc = inject('rpc')
 
@@ -75,10 +76,13 @@ onMounted(() => {
     </div>
 
     <ul>
-      <li v-for="todo in todos" :key="todo.id" :class="{ done: todo.done }">
-        <span @click="handleToggle(todo)" class="text">{{ todo.text }}</span>
-        <button @click="handleDelete(todo.id)" class="delete-btn">×</button>
-      </li>
+      <TodoItem 
+        v-for="todo in todos" 
+        :key="todo.id" 
+        :todo="todo" 
+        @toggle="handleToggle" 
+        @delete="handleDelete" 
+      />
     </ul>
     <p v-if="todos.length === 0" class="empty">No todos yet!</p>
   </div>
@@ -140,39 +144,6 @@ ul {
   list-style: none;
   padding: 0;
   margin: 0;
-}
-
-li {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.75rem 0;
-  border-bottom: 1px solid #eee;
-}
-
-li:last-child {
-  border-bottom: none;
-}
-
-.text {
-  cursor: pointer;
-  flex: 1;
-}
-
-.done .text {
-  text-decoration: line-through;
-  color: #999;
-}
-
-.delete-btn {
-  background-color: #ff4757;
-  border-radius: 4px;
-  padding: 0.2rem 0.5rem;
-  margin-left: 0.5rem;
-}
-
-.delete-btn:hover {
-  background-color: #ff6b81;
 }
 
 .empty {
