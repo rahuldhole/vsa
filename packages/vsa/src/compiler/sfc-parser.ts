@@ -332,9 +332,7 @@ export const ${fnName} = async (...args: any[]) => {
       const stateVars: string[] = []
       let m2
       while ((m2 = varRegex.exec(serverCode)) !== null) {
-        if (!exportedFunctions.includes(m2[1])) {
-           stateVars.push(m2[1])
-        }
+        stateVars.push(m2[1])
       }
       
       const safeId = cleanId.replace(/[^a-zA-Z0-9]/g, '_')
@@ -342,7 +340,7 @@ export const ${fnName} = async (...args: any[]) => {
       if (options?.ssr) {
         // Strip 'export ' so it doesn't break <script setup> compilation
         let injectCode = serverCode.replace(/export\s+/g, '')
-        
+
         // Serialize state to global object
         injectCode += `\nif (typeof globalThis !== 'undefined') { globalThis.__VHP_STATE__ = globalThis.__VHP_STATE__ || {}; globalThis.__VHP_STATE__['${safeId}'] = {}; `
         for (const v of stateVars) {

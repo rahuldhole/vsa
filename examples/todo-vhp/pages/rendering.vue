@@ -13,6 +13,9 @@ export const count = 5;
 const serverOnlyMessage = "hello from vhp server only"
 const serverOnlyCount = 10
 
+export const serverAccessedInTemplate = "from server"
+export const serverCountAccessedInTemplate = 7
+
 console.log("server-only-message: ", serverOnlyMessage)
 
 </script>
@@ -82,10 +85,19 @@ console.log("client: ", clientHello)
     </template>
 
     <h2>4. Server Side SSR Rendered</h2>
-      {{  serverOnlyMessage }} <br />
-      <template v-for="i in serverOnlyCount" :key="i">
-        {{ i }}<br />
-      </template>
+    <div>The exported variables</div>
+    {{ serverAccessedInTemplate }}
+    <template v-for="i in serverCountAccessedInTemplate" :key="i">
+      {{ i }}
+    </template>
+    
+    
+
+    <div>Server only (non exported) will not be visible:</div>
+    {{  serverOnlyMessage }} <br />
+    <template v-for="i in serverOnlyCount" :key="i">
+      {{ i }}<br />
+    </template>
     <hr />
 
     <section class="comparison">
