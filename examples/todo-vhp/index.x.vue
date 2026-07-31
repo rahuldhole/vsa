@@ -43,6 +43,7 @@ async function handleAdd() {
   if (!newTodoText.value.trim()) return
   const added = await rpc.addTodo(newTodoText.value)
   todos.value.push(added)
+  console.log("Added todo", added)
   newTodoText.value = ''
 }
 
