@@ -85,19 +85,31 @@ console.log("client: ", clientHello)
     </template>
 
     <h2>4. Server Side SSR Rendered</h2>
-    <div>The exported variables</div>
-    {{ serverAccessedInTemplate }}
+    <h4>The exported variables</h4>
+    {{ serverAccessedInTemplate }} <br />
     <template v-for="i in serverCountAccessedInTemplate" :key="i">
-      {{ i }}
+      {{ i }}<br />
     </template>
+    <br />
+
+    <h4>The exported but inside ClientOnly will not render but hydrate on client side via rpc</h4>
+    <ClientOnly>
+      <div v-if="serverAccessedInTemplate">{{ serverAccessedInTemplate }} (ClientOnly)</div>
+    </ClientOnly>
     
     
 
-    <div>Server only (non exported) will not be visible:</div>
+    <h4>Server only (non exported) will also work:</h4>
     {{  serverOnlyMessage }} <br />
     <template v-for="i in serverOnlyCount" :key="i">
       {{ i }}<br />
     </template>
+
+    <h4>Server only (non exported) but inside clientOnly will not work because they are provate so no rpc:</h4>
+    <ClientOnly>
+      <div v-if="serverOnlyMessage">{{ serverOnlyMessage }} (ClientOnly)</div>
+      <div v-if="serverOnlyCount">Count is: {{ serverOnlyCount }} (ClientOnly)</div>
+    </ClientOnly>
     <hr />
 
     <section class="comparison">

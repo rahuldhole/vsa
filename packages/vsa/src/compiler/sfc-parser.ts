@@ -330,9 +330,14 @@ export const ${fnName} = async (...args: any[]) => {
       const varRegex = /(?:const|let|var)\s+([a-zA-Z0-9_]+)/g
       const funcRegex = /function\s+([a-zA-Z0-9_]+)/g
       const stateVars: string[] = []
+      const exportedVars: string[] = []
       let m2
       while ((m2 = varRegex.exec(serverCode)) !== null) {
-        stateVars.push(m2[1])
+        if (exportedFunctions.includes(m2[1])) {
+          exportedVars.push(m2[1])
+        } else {
+          stateVars.push(m2[1])
+        }
       }
       
       const safeId = cleanId.replace(/[^a-zA-Z0-9]/g, '_')
@@ -341,9 +346,9 @@ export const ${fnName} = async (...args: any[]) => {
         // Strip 'export ' so it doesn't break <script setup> compilation
         let injectCode = serverCode.replace(/export\s+/g, '')
 
-        // Serialize state to global object
+        // Serialize all primitive variables to global object
         injectCode += `\nif (typeof globalThis !== 'undefined') { globalThis.__VHP_STATE__ = globalThis.__VHP_STATE__ || {}; globalThis.__VHP_STATE__['${safeId}'] = {}; `
-        for (const v of stateVars) {
+        for (const v of [...exportedVars, ...stateVars]) {
            injectCode += `globalThis.__VHP_STATE__['${safeId}']['${v}'] = ${v};\n`
         }
         injectCode += `}\n`
@@ -355,9 +360,9 @@ export const ${fnName} = async (...args: any[]) => {
           s.prepend('<script setup>\n' + injectCode + '\n</script>\n')
         }
       } else {
-        // Hydrate server-only variables on client
+        // Hydrate all primitive variables on client
         let clientMocks = `const __vhp_state_${safeId} = typeof window !== 'undefined' && window.__VHP_STATE__ ? (window.__VHP_STATE__['${safeId}'] || {}) : {};\n`
-        for (const v of stateVars) {
+        for (const v of [...exportedVars, ...stateVars]) {
            clientMocks += `const ${v} = __vhp_state_${safeId}['${v}'];\n`
         }
         while ((m2 = funcRegex.exec(serverCode)) !== null) {
