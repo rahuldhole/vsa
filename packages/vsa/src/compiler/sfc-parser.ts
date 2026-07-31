@@ -8,6 +8,8 @@ export interface ScriptServerOptions {
   outDir?: string
 }
 
+const API_METHODS = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD']
+
 export const ViteScriptServerPlugin = (options: ScriptServerOptions = {}): any => {
   let exportedFunctions: string[] = []
   // Map of file ID -> server code block, so multiple files' <script server> blocks are merged
@@ -34,8 +36,9 @@ export const ViteScriptServerPlugin = (options: ScriptServerOptions = {}): any =
           const exportRegex = /export\s+(?:(?:async\s+)?function\s+|(?:const|let|var)\s+)([a-zA-Z0-9_]+)/g
           let m
           while ((m = exportRegex.exec(match[1])) !== null) {
-            if (!exportedFunctions.includes(m[1])) {
-              exportedFunctions.push(m[1])
+            const fnName = m[1]
+            if (!API_METHODS.includes(fnName) && !exportedFunctions.includes(fnName)) {
+              exportedFunctions.push(fnName)
             }
           }
         }
@@ -68,6 +71,33 @@ export const ${fnName} = async (...args: any[]) => {
     fs.writeFileSync(stubPath, code)
   }
 
+  function pathToRoute(filePath: string, root: string): string {
+    const relative = path.relative(root, filePath).replace(/\\/g, '/')
+    let routePath = ''
+    
+    const pagesMatch = relative.match(/(?:^|\/)pages\/(.+)\.(?:vue|vhp|vsa|x\.vue)$/)
+    if (pagesMatch) {
+      routePath = pagesMatch[1]
+    } else {
+      // If root is already the pages directory (like with vhp dev --dir pages)
+      const extMatch = relative.match(/(.+)\.(?:vue|vhp|vsa|x\.vue)$/)
+      if (extMatch && !relative.startsWith('..')) {
+        routePath = extMatch[1]
+      }
+    }
+    
+    if (!routePath) return ''
+    if (routePath === 'index') return '/'
+    
+    routePath = routePath.replace(/\/index$/, '')
+    // replace [param] with :param
+    routePath = routePath.replace(/\[([^\]]+)\]/g, ':$1')
+    // Catch-all [...slug] -> **
+    routePath = routePath.replace(/:(\.\.\.[^/]+)/g, '**')
+    
+    return '/' + routePath
+  }
+
   function writeServerRegistry() {
     if (!fs.existsSync(outDir)) {
       fs.mkdirSync(outDir, { recursive: true })
@@ -76,6 +106,9 @@ export const ${fnName} = async (...args: any[]) => {
 
     // Write each file's server code as a separate module to avoid symbol collisions
     const reExports: string[] = []
+    const apiReExports: string[] = []
+    apiReExports.push(`export const apiRoutes: Record<string, any> = {};`)
+    
     let moduleIndex = 0
     for (const [filePath, serverCode] of serverCodeMap.entries()) {
       const moduleName = `_server_module_${moduleIndex++}`
@@ -87,15 +120,26 @@ export const ${fnName} = async (...args: any[]) => {
       let m
       const exportNames: string[] = []
       while ((m = exportRegex.exec(serverCode)) !== null) {
-        exportNames.push(m[1])
+        const fnName = m[1]
+        if (!API_METHODS.includes(fnName)) {
+          exportNames.push(fnName)
+        }
       }
       if (exportNames.length > 0) {
         reExports.push(`export { ${exportNames.join(', ')} } from './${moduleName}'`)
       }
+      
+      const routePath = pathToRoute(filePath, viteRoot || process.cwd())
+      if (routePath) {
+        apiReExports.push(`import * as _api_${moduleIndex} from './${moduleName}';`)
+        apiReExports.push(`apiRoutes['${routePath}'] = _api_${moduleIndex};`)
+      }
     }
 
-    // Write a registry that re-exports from all modules
+    // Write a registry that re-exports from all modules for RPC
     fs.writeFileSync(registryPath, reExports.join('\n') + '\n')
+    // Write API registry
+    fs.writeFileSync(path.resolve(outDir, 'script-server-api.ts'), apiReExports.join('\n') + '\n')
   }
 
   return {
@@ -129,7 +173,50 @@ export const ${fnName} = async (...args: any[]) => {
     },
 
     configureServer(server: any) {
-      // Add dev server middleware for pure Vite + Vue apps
+      // Add dev server middleware for pure Vite + Vue apps to handle API routes
+      server.middlewares.use(async (req: import('http').IncomingMessage, res: import('http').ServerResponse, next: Function) => {
+        if (!req.url || req.url === '/__script_server_rpc') return next()
+        
+        try {
+          const apiRegistryPath = path.resolve(outDir, 'script-server-api.ts')
+          if (!fs.existsSync(apiRegistryPath)) return next()
+          
+          // In Vite dev, URL path without query
+          const urlPath = req.url.split('?')[0]
+          const apiModule = await server.ssrLoadModule(apiRegistryPath)
+          const apiRoutes = apiModule.apiRoutes
+          
+          if (apiRoutes && apiRoutes[urlPath]) {
+            const handlers = apiRoutes[urlPath]
+            const method = req.method || 'GET'
+            if (typeof handlers[method] === 'function') {
+              // Execute the API handler
+              // For pure Vite apps, we mock a simple event object or just pass req/res
+              // To keep it simple, we pass { req, res }
+              const result = await handlers[method]({ req, res, method, path: urlPath })
+              
+              if (result !== undefined) {
+                if (result instanceof Buffer) {
+                  res.setHeader('Content-Type', 'application/octet-stream')
+                  res.end(result)
+                } else if (typeof result === 'object' && result !== null) {
+                  res.setHeader('Content-Type', 'application/json')
+                  res.end(JSON.stringify(result))
+                } else {
+                  res.setHeader('Content-Type', 'text/html')
+                  res.end(String(result))
+                }
+                return
+              }
+            }
+          }
+        } catch (err) {
+          console.error('Script Server API Error:', err)
+        }
+        next()
+      })
+
+      // Add dev server middleware for RPC
       server.middlewares.use('/__script_server_rpc', async (req: import('http').IncomingMessage, res: import('http').ServerResponse) => {
         if (req.method !== 'POST') {
           res.statusCode = 405
@@ -193,8 +280,9 @@ export const ${fnName} = async (...args: any[]) => {
       const exportRegex = /export\s+(?:(?:async\s+)?function\s+|(?:const|let|var)\s+)([a-zA-Z0-9_]+)/g
       let m
       while ((m = exportRegex.exec(serverCode)) !== null) {
-        if (!exportedFunctions.includes(m[1])) {
-          exportedFunctions.push(m[1])
+        const fnName = m[1]
+        if (!API_METHODS.includes(fnName) && !exportedFunctions.includes(fnName)) {
+          exportedFunctions.push(fnName)
         }
       }
 

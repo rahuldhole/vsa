@@ -17,14 +17,16 @@ const navigate = (path) => {
     <div class="menu-section">
       <span class="section-label">SPA Links (&lt;VhpLink&gt;):</span>
       <nav class="top-menu">
-        <VhpLink to="/" :class="{ active: active === 'home' }">Todos</VhpLink>
+        <VhpLink to="/" :class="{ active: active === 'home' }">Todos (RPC)</VhpLink>
+        <VhpLink to="/api-demo" :class="{ active: active === 'api-demo' }">Todos (API)</VhpLink>
         <VhpLink to="/about" :class="{ active: active === 'about' }">About</VhpLink>
       </nav>
     </div>
     <div class="menu-section">
       <span class="section-label">MPA Links (Standard &lt;a&gt;):</span>
       <nav class="top-menu">
-        <a href="/" :class="{ active: active === 'home' }">Todos (Reload)</a>
+        <a href="/" :class="{ active: active === 'home' }">Todos RPC (Reload)</a>
+        <a href="/api-demo" :class="{ active: active === 'api-demo' }">Todos API (Reload)</a>
         <a href="/about" :class="{ active: active === 'about' }">About (Reload)</a>
       </nav>
     </div>

@@ -1,34 +1,46 @@
-<script server>
-// Server block left empty as logic was moved to db.vue
-</script>
-
 <script setup>
-import { ref, onMounted, inject } from 'vue'
+import { ref, onMounted } from 'vue'
 import TodoItem from '../components/TodoItem.vue'
 import Navbar from '../components/Navbar.vue'
 
-const rpc = inject('rpc')
 const todos = ref([])
 const newTodoText = ref('')
 
 async function fetchTodos() {
-  todos.value = await rpc.getTodos()
+  const res = await fetch('/api/todos')
+  const data = await res.json()
+  todos.value = data.todos || []
 }
 
 async function handleAdd() {
   if (!newTodoText.value.trim()) return
-  const added = await rpc.addTodo(newTodoText.value)
-  todos.value.push(added)
+  const res = await fetch('/api/todos', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text: newTodoText.value })
+  })
+  const data = await res.json()
+  if (data.success) {
+    todos.value.push(data.todo)
+  }
   newTodoText.value = ''
 }
 
 async function handleToggle(todo) {
   todo.done = !todo.done
-  await rpc.toggleTodo(todo.id, todo.done)
+  await fetch('/api/todos', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id: todo.id, done: todo.done })
+  })
 }
 
 async function handleDelete(id) {
-  await rpc.deleteTodo(id)
+  await fetch('/api/todos', {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id })
+  })
   todos.value = todos.value.filter(t => t.id !== id)
 }
 
@@ -39,10 +51,11 @@ onMounted(() => {
 
 <template>
   <div class="layout">
-    <Navbar active="home" />
+    <Navbar active="api-demo" />
     <main class="content">
       <div class="todo-app">
-        <h1>Todo List (.vhp)</h1>
+        <h1>Todo List (API Demo)</h1>
+        <p class="subtitle">This page uses standard REST API fetch instead of VSA RPC.</p>
     <div class="input-group">
       <input 
         v-model="newTodoText" 
@@ -74,6 +87,13 @@ onMounted(() => {
   margin: 0 auto;
 }
 
+.subtitle {
+  text-align: center;
+  color: #666;
+  margin-bottom: 2rem;
+  font-size: 0.9rem;
+}
+
 .content {
   display: flex;
   justify-content: center;
@@ -84,6 +104,7 @@ h1 {
   margin-top: 0;
   color: #2c3e50;
   text-align: center;
+  margin-bottom: 0.5rem;
 }
 
 .input-group {
