@@ -10,8 +10,8 @@ export const serverInfo = async () => {
 
 export const serverHello = "hello from vhp server"
 export const count = 5;
-export const serverOnlyMessage = "hello from vhp server only"
-export const serverOnlyCount = 10
+const serverOnlyMessage = "hello from vhp server only"
+const serverOnlyCount = 10
 
 console.log("server-only-message: ", serverOnlyMessage)
 

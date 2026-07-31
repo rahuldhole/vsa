@@ -326,9 +326,30 @@ export const ${fnName} = async (...args: any[]) => {
       const s = new MagicString(code)
       s.remove(match.index!, match.index! + match[0].length)
 
+      // Extract variables to serialize
+      const varRegex = /(?:const|let|var)\s+([a-zA-Z0-9_]+)/g
+      const funcRegex = /function\s+([a-zA-Z0-9_]+)/g
+      const stateVars: string[] = []
+      let m2
+      while ((m2 = varRegex.exec(serverCode)) !== null) {
+        if (!exportedFunctions.includes(m2[1])) {
+           stateVars.push(m2[1])
+        }
+      }
+      
+      const safeId = cleanId.replace(/[^a-zA-Z0-9]/g, '_')
+
       if (options?.ssr) {
         // Strip 'export ' so it doesn't break <script setup> compilation
-        const injectCode = serverCode.replace(/export\s+/g, '')
+        let injectCode = serverCode.replace(/export\s+/g, '')
+        
+        // Serialize state to global object
+        injectCode += `\nif (typeof globalThis !== 'undefined') { globalThis.__VHP_STATE__ = globalThis.__VHP_STATE__ || {}; globalThis.__VHP_STATE__['${safeId}'] = {}; `
+        for (const v of stateVars) {
+           injectCode += `globalThis.__VHP_STATE__['${safeId}']['${v}'] = ${v};\n`
+        }
+        injectCode += `}\n`
+
         const setupMatch = code.match(/<script\s+setup[^>]*>/)
         if (setupMatch) {
           s.appendRight(setupMatch.index! + setupMatch[0].length, '\n' + injectCode + '\n')
@@ -336,16 +357,10 @@ export const ${fnName} = async (...args: any[]) => {
           s.prepend('<script setup>\n' + injectCode + '\n</script>\n')
         }
       } else {
-        // Mock server-only variables on client so Vue doesn't complain during hydration
-        const varRegex = /(?:const|let|var)\s+([a-zA-Z0-9_]+)/g
-        const funcRegex = /function\s+([a-zA-Z0-9_]+)/g
-        
-        let clientMocks = ''
-        let m2
-        while ((m2 = varRegex.exec(serverCode)) !== null) {
-          if (!exportedFunctions.includes(m2[1])) {
-             clientMocks += `const ${m2[1]} = undefined;\n`
-          }
+        // Hydrate server-only variables on client
+        let clientMocks = `const __vhp_state_${safeId} = typeof window !== 'undefined' && window.__VHP_STATE__ ? (window.__VHP_STATE__['${safeId}'] || {}) : {};\n`
+        for (const v of stateVars) {
+           clientMocks += `const ${v} = __vhp_state_${safeId}['${v}'];\n`
         }
         while ((m2 = funcRegex.exec(serverCode)) !== null) {
           if (!exportedFunctions.includes(m2[1])) {

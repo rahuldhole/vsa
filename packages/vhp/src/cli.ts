@@ -221,7 +221,8 @@ export { app }
                   const mod = await server.ssrLoadModule(serverEntryPath);
                   const appHtml = await renderToString(mod.app);
                   
-                  const ssrHtml = html.replace('<div id="app"></div>', `<div id="app">${appHtml}</div>`);
+                  const stateHtml = `<script>window.__VHP_STATE__ = ${JSON.stringify(globalThis.__VHP_STATE__ || {})}</script>`;
+                  const ssrHtml = html.replace('<div id="app"></div>', `${stateHtml}\n<div id="app">${appHtml}</div>`);
                   res.setHeader('Content-Type', 'text/html')
                   server.transformIndexHtml(req.url, ssrHtml).then((transformed: string) => {
                     res.end(transformed)
