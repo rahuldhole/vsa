@@ -179,7 +179,8 @@ export const ${fnName} = async (...args: any[]) => {
     },
 
     transform(code: string, id: string) {
-      if (!id.endsWith('.vue') && !id.endsWith('.vhp') && !id.endsWith('.x.vue') && !id.endsWith('.vsa')) return null
+      const cleanId = id.split('?')[0]
+      if (!cleanId.endsWith('.vue') && !cleanId.endsWith('.vhp') && !cleanId.endsWith('.x.vue') && !cleanId.endsWith('.vsa')) return null
 
       // Use a simple regex to find the <script server> block
       const match = code.match(/<script\s+server>([\s\S]*?)<\/script>/)

@@ -240,11 +240,13 @@ export default defineEventHandler(async (event) => {
       rootDir: cwd,
       buildDir: path.resolve(outDir, 'nitro'),
       compatibilityDate: '2024-04-03',
+      serveStatic: true,
       output: {
         dir: path.resolve(cwd, '.output')
       },
       publicAssets: [
         {
+          baseURL: '/',
           dir: path.resolve(outDir, 'dist/public'),
           maxAge: 3600
         }
