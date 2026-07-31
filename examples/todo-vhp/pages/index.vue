@@ -1,36 +1,6 @@
-<script server>
-// In-memory data store for the MVP
-let todos = []
-let idCounter = 1
-
-export async function getTodos() {
-  return todos
-}
-
-export async function addTodo(text) {
-  const newTodo = { id: idCounter++, text, done: false }
-  todos.push(newTodo)
-  console.log("Added todo", newTodo)
-  return newTodo
-}
-
-export async function toggleTodo(id, done) {
-  const todo = todos.find(t => t.id === id)
-  if (todo) {
-    todo.done = done
-  }
-  return true
-}
-
-export async function deleteTodo(id) {
-  todos = todos.filter(t => t.id !== id)
-  return true
-}
-</script>
-
 <script setup>
 import { ref, onMounted, inject } from 'vue'
-import TodoItem from './components/TodoItem.vue'
+import TodoItem from '../components/TodoItem.vue'
 
 const rpc = inject('rpc')
 
@@ -88,25 +58,7 @@ onMounted(() => {
   </div>
 </template>
 
-<style>
-body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  background-color: #f5f5f5;
-  color: #333;
-  display: flex;
-  justify-content: center;
-  padding-top: 50px;
-}
-
-.todo-app {
-  background: white;
-  padding: 2rem;
-  border-radius: 8px;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-  width: 100%;
-  max-width: 400px;
-}
-
+<style scoped>
 h1 {
   margin-top: 0;
   color: #2c3e50;

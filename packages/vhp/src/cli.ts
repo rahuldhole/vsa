@@ -21,10 +21,15 @@ const dev = defineCommand({
       type: 'string',
       description: 'Port to run the server on',
       default: '3000'
+    },
+    dir: {
+      type: 'string',
+      description: 'Directory context to run VHP in',
+      required: false
     }
   },
   async run({ args }) {
-    const cwd = process.cwd()
+    const cwd = args.dir ? path.resolve(process.cwd(), args.dir) : process.cwd()
     const outDir = path.resolve(cwd, '.vhp')
 
     let entry = args.entry
@@ -42,12 +47,20 @@ const dev = defineCommand({
       console.warn('No entry file provided and no default (App.vhp, App.vue) found. Running in standard Vite mode.')
     }
 
+    const hasPagesDir = fs.existsSync(path.resolve(cwd, 'pages'))
+    const globPattern = hasPagesDir 
+      ? "'/pages/**/*.{vue,x.vue,vhp,vsa}'" 
+      : "['/**/*.{vue,x.vue,vhp,vsa}', '!**/node_modules/**', '!**/.vhp/**']"
+    const routePrefix = hasPagesDir ? '/pages' : '/'
+
     const htmlPlugin = () => {
       return {
         name: 'vsa-html-fallback',
         configureServer(server: any) {
           server.middlewares.use((req: any, res: any, next: any) => {
-            if (req.url === '/' && !fs.existsSync(path.resolve(cwd, 'index.html'))) {
+            const isHtmlGet = req.method === 'GET' && (req.headers.accept || '').includes('text/html')
+            const isFile = req.url.includes('.')
+            if (isHtmlGet && !isFile && !fs.existsSync(path.resolve(cwd, 'index.html'))) {
               const html = `
 <!DOCTYPE html>
 <html lang="en">
@@ -59,11 +72,47 @@ const dev = defineCommand({
   <body>
     <div id="app"></div>
     <script type="module">
-      import { createApp } from 'vue'
+      import { createApp, ref, defineComponent, h } from 'vue'
       import App from '/${entry}'
       import * as rpc from '#script-server'
       
+      const currentPath = ref(window.location.pathname)
+      window.addEventListener('popstate', () => {
+        currentPath.value = window.location.pathname
+      })
+      window.navigate = (path) => {
+        window.history.pushState({}, '', path)
+        currentPath.value = path
+      }
+
+      const VhpPage = defineComponent({
+        setup() {
+          const pages = import.meta.glob(${globPattern}, { eager: true })
+          const routes = {}
+          for (const path in pages) {
+            if (path.includes('/_') || path.includes('/.')) continue
+            if (path.endsWith('/${entry}') || path === './${entry}') continue
+            let routePath = path
+              .replace('${routePrefix}', '')
+              .replace(/\\.(vue|x\\.vue|vhp|vsa)$/, '')
+              .replace(/\\/index$/, '')
+            if (!routePath.startsWith('/')) {
+              routePath = '/' + routePath
+            }
+            if (routePath === '') routePath = '/'
+            routes[routePath] = pages[path].default
+          }
+          return () => {
+            let path = currentPath.value
+            if (path.endsWith('/') && path.length > 1) path = path.slice(0, -1)
+            const comp = routes[path]
+            return comp ? h(comp) : h('div', { class: 'vhp-not-found' }, '404: Route not found')
+          }
+        }
+      })
+      
       const app = createApp(App)
+      app.component('VhpPage', VhpPage)
       app.provide('rpc', rpc)
       app.mount('#app')
     </script>
@@ -72,7 +121,7 @@ const dev = defineCommand({
               `
               res.setHeader('Content-Type', 'text/html')
               // Use Vite's transformIndexHtml to inject HMR scripts
-              server.transformIndexHtml('/', html).then((transformed: string) => {
+              server.transformIndexHtml(req.url, html).then((transformed: string) => {
                 res.end(transformed)
               })
               return
@@ -117,10 +166,15 @@ const build = defineCommand({
       type: 'positional',
       description: 'Entry file (e.g., App.vhp)',
       required: false
+    },
+    dir: {
+      type: 'string',
+      description: 'Directory context to run VHP in',
+      required: false
     }
   },
   async run({ args }) {
-    const cwd = process.cwd()
+    const cwd = args.dir ? path.resolve(process.cwd(), args.dir) : process.cwd()
     const outDir = path.resolve(cwd, '.vhp')
     
     let entry = args.entry
@@ -138,6 +192,12 @@ const build = defineCommand({
       console.warn('No entry file provided and no default (App.vhp, App.vue) found. Running in standard Vite mode.')
     }
 
+    const hasPagesDir = fs.existsSync(path.resolve(cwd, 'pages'))
+    const globPattern = hasPagesDir 
+      ? "'/pages/**/*.{vue,x.vue,vhp,vsa}'" 
+      : "['/**/*.{vue,x.vue,vhp,vsa}', '!**/node_modules/**', '!**/.vhp/**']"
+    const routePrefix = hasPagesDir ? '/pages' : '/'
+
     // 1. Build Client
     console.log('Building client...')
     await viteBuild({
@@ -147,7 +207,7 @@ const build = defineCommand({
         emptyOutDir: true,
         rollupOptions: {
           // If no index.html exists, Vite will need a fallback input
-          input: fs.existsSync(path.resolve(cwd, 'index.html')) ? path.resolve(cwd, 'index.html') : 'vsa-virtual-index.html'
+          input: fs.existsSync(path.resolve(cwd, 'index.html')) ? path.resolve(cwd, 'index.html') : path.resolve(cwd, 'vsa-virtual-index.html')
         }
       },
       plugins: [
@@ -158,12 +218,12 @@ const build = defineCommand({
         {
           name: 'vsa-html-fallback-build',
           resolveId(id) {
-            if (id === 'vsa-virtual-index.html') {
-              return id
+            if (id === 'vsa-virtual-index.html' || id === path.resolve(cwd, 'vsa-virtual-index.html')) {
+              return path.resolve(cwd, 'vsa-virtual-index.html')
             }
           },
           load(id) {
-            if (id === 'vsa-virtual-index.html') {
+            if (id === path.resolve(cwd, 'vsa-virtual-index.html')) {
               return `
 <!DOCTYPE html>
 <html lang="en">
@@ -175,11 +235,47 @@ const build = defineCommand({
   <body>
     <div id="app"></div>
     <script type="module">
-      import { createApp } from 'vue'
+      import { createApp, ref, defineComponent, h } from 'vue'
       import App from '/${entry}'
       import * as rpc from '#script-server'
       
+      const currentPath = ref(window.location.pathname)
+      window.addEventListener('popstate', () => {
+        currentPath.value = window.location.pathname
+      })
+      window.navigate = (path) => {
+        window.history.pushState({}, '', path)
+        currentPath.value = path
+      }
+
+      const VhpPage = defineComponent({
+        setup() {
+          const pages = import.meta.glob(${globPattern}, { eager: true })
+          const routes = {}
+          for (const path in pages) {
+            if (path.includes('/_') || path.includes('/.')) continue
+            if (path.endsWith('/${entry}') || path === './${entry}') continue
+            let routePath = path
+              .replace('${routePrefix}', '')
+              .replace(/\\.(vue|x\\.vue|vhp|vsa)$/, '')
+              .replace(/\\/index$/, '')
+            if (!routePath.startsWith('/')) {
+              routePath = '/' + routePath
+            }
+            if (routePath === '') routePath = '/'
+            routes[routePath] = pages[path].default
+          }
+          return () => {
+            let path = currentPath.value
+            if (path.endsWith('/') && path.length > 1) path = path.slice(0, -1)
+            const comp = routes[path]
+            return comp ? h(comp) : h('div', { class: 'vhp-not-found' }, '404: Route not found')
+          }
+        }
+      })
+      
       const app = createApp(App)
+      app.component('VhpPage', VhpPage)
       app.provide('rpc', rpc)
       app.mount('#app')
     </script>
@@ -198,8 +294,17 @@ const build = defineCommand({
     })
 
     const fallbackHtmlPath = path.resolve(outDir, 'dist/public/vsa-virtual-index.html')
+    const realFallbackHtmlPath = path.resolve(outDir, `dist/public/${path.basename(cwd)}-virtual-index.html`)
     if (fs.existsSync(fallbackHtmlPath)) {
       fs.renameSync(fallbackHtmlPath, path.resolve(outDir, 'dist/public/index.html'))
+    } else if (fs.existsSync(realFallbackHtmlPath)) {
+      fs.renameSync(realFallbackHtmlPath, path.resolve(outDir, 'dist/public/index.html'))
+    } else {
+      // Sometimes Vite outputs it using the resolved name from Rollup
+      const possibleName = path.resolve(outDir, 'dist/public', path.basename(cwd) + '/vsa-virtual-index.html')
+      if (fs.existsSync(possibleName)) {
+        fs.renameSync(possibleName, path.resolve(outDir, 'dist/public/index.html'))
+      }
     }
 
     // 2. Generate Nitro Handler
