@@ -5,6 +5,7 @@ import vuePlugin from '@vitejs/plugin-vue'
 import path from 'path'
 import fs from 'fs'
 import { createNitro, build as buildNitro } from 'nitropack'
+import { renderToString } from 'vue/server-renderer'
 
 const dev = defineCommand({
   meta: {
@@ -68,7 +69,7 @@ const dev = defineCommand({
       return {
         name: 'vsa-html-fallback',
         configureServer(server: any) {
-          server.middlewares.use((req: any, res: any, next: any) => {
+          server.middlewares.use(async (req: any, res: any, next: any) => {
             const isHtmlGet = req.method === 'GET' && (req.headers.accept || '').includes('text/html')
             const isFile = req.url.includes('.')
             if (isHtmlGet && !isFile && !fs.existsSync(path.resolve(cwd, 'index.html'))) {
@@ -83,22 +84,25 @@ const dev = defineCommand({
   <body>
     <div id="app"></div>
     <script type="module">
-      import { createApp, ref, defineComponent, h } from 'vue'
+      import { createApp, ref, defineComponent, defineAsyncComponent, h } from 'vue'
+      globalThis.definePageRender = () => {};
       ${importLine}
       import * as rpc from '#script-server'
       
-      const currentPath = ref(window.location.pathname)
-      window.addEventListener('popstate', () => {
-        currentPath.value = window.location.pathname
-      })
-      window.navigate = (path) => {
-        window.history.pushState({}, '', path)
-        currentPath.value = path
+      const currentPath = ref(typeof window !== 'undefined' ? window.location.pathname : '__VHP_SSR_PATH__')
+      if (typeof window !== 'undefined') {
+        window.addEventListener('popstate', () => {
+          currentPath.value = window.location.pathname
+        })
+        window.navigate = (path) => {
+          window.history.pushState({}, '', path)
+          currentPath.value = path
+        }
       }
 
       const VhpPage = defineComponent({
         setup() {
-          const pages = import.meta.glob(${globPattern}, { eager: true })
+          const pages = import.meta.glob(${globPattern})
           const routes = {}
           for (const path in pages) {
             if (path.includes('/_') || path.includes('/.')) continue
@@ -112,7 +116,7 @@ const dev = defineCommand({
               routePath = '/' + routePath
             }
             if (routePath === '') routePath = '/'
-            routes[routePath] = pages[path].default
+            routes[routePath] = defineAsyncComponent(pages[path])
           }
           return () => {
             let path = currentPath.value
@@ -166,11 +170,57 @@ const dev = defineCommand({
       app.component('VhpPage', VhpPage)
       app.component('VhpLink', VhpLink)
       app.provide('rpc', rpc)
-      app.mount('#app')
+      if (typeof window !== 'undefined') {
+        app.mount('#app')
+      }
+      export { app }
     </script>
   </body>
 </html>
               `
+
+              let requiresSsr = true;
+              let requestPath = req.url.split('?')[0];
+              if (requestPath === '/') requestPath = '/index';
+              const searchBase = hasPagesDir ? path.resolve(cwd, 'pages') : cwd;
+              const possiblePaths = [
+                path.resolve(searchBase, requestPath.slice(1) + '.vue'),
+                path.resolve(searchBase, requestPath.slice(1) + '.vhp')
+              ];
+              for (const p of possiblePaths) {
+                if (fs.existsSync(p)) {
+                  const content = fs.readFileSync(p, 'utf-8');
+                  if (content.includes("definePageRender('ssr')")) {
+                    requiresSsr = true;
+                    console.log('Detected SSR route:', p);
+                    break;
+                  }
+                }
+              }
+              console.log('SSR Check for', requestPath, 'requiresSsr:', requiresSsr);
+
+              if (requiresSsr) {
+                try {
+                  const serverEntryPath = path.resolve(outDir, 'server-entry.ts');
+                  // We extract the script content to load it via Vite
+                  const scriptContent = html.match(/<script type="module">([\s\S]*?)<\/script>/)?.[1] || '';
+                  const serverCode = 'globalThis.definePageRender = () => {};\n' + scriptContent.replace('__VHP_SSR_PATH__', requestPath);
+                  fs.writeFileSync(serverEntryPath, serverCode);
+                  
+                  const mod = await server.ssrLoadModule(serverEntryPath);
+                  const appHtml = await renderToString(mod.app);
+                  
+                  const ssrHtml = html.replace('<div id="app"></div>', `<div id="app">${appHtml}</div>`);
+                  res.setHeader('Content-Type', 'text/html')
+                  server.transformIndexHtml(req.url, ssrHtml).then((transformed: string) => {
+                    res.end(transformed)
+                  })
+                  return;
+                } catch(e) {
+                  console.error('SSR Error:', e);
+                }
+              }
+
               res.setHeader('Content-Type', 'text/html')
               // Use Vite's transformIndexHtml to inject HMR scripts
               server.transformIndexHtml(req.url, html).then((transformed: string) => {
@@ -298,7 +348,8 @@ const build = defineCommand({
   <body>
     <div id="app"></div>
     <script type="module">
-      import { createApp, ref, defineComponent, h } from 'vue'
+      import { createApp, ref, defineComponent, defineAsyncComponent, h } from 'vue'
+      globalThis.definePageRender = () => {};
       ${importLine}
       import * as rpc from '#script-server'
       
@@ -313,7 +364,7 @@ const build = defineCommand({
 
       const VhpPage = defineComponent({
         setup() {
-          const pages = import.meta.glob(${globPattern}, { eager: true })
+          const pages = import.meta.glob(${globPattern})
           const routes = {}
           for (const path in pages) {
             if (path.includes('/_') || path.includes('/.')) continue
@@ -327,7 +378,7 @@ const build = defineCommand({
               routePath = '/' + routePath
             }
             if (routePath === '') routePath = '/'
-            routes[routePath] = pages[path].default
+            routes[routePath] = defineAsyncComponent(pages[path])
           }
           return () => {
             let path = currentPath.value
@@ -381,7 +432,10 @@ const build = defineCommand({
       app.component('VhpPage', VhpPage)
       app.component('VhpLink', VhpLink)
       app.provide('rpc', rpc)
-      app.mount('#app')
+      if (typeof window !== 'undefined') {
+        app.mount('#app')
+      }
+      export { app }
     </script>
   </body>
 </html>
