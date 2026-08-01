@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="100%" height="100%">
+  <!-- 
+    VHP (Vue + Ganesha) Loader Version - Full Dimensionality
+    Added a subtle gradient and a tight drop shadow specifically to the 
+    dark slate elements to create a layered, carved illusion around the eyes.
+  -->
+  <defs>
+    <!-- Shiny Emerald Gradients (Outer Base) -->
+    <linearGradient id="shinyLeft" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#80E3B6" />
+      <stop offset="40%" stop-color="#41B883" />
+      <stop offset="100%" stop-color="#2C8C61" />
+    </linearGradient>
+
+    <linearGradient id="shinyRight" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#80E3B6" />
+      <stop offset="40%" stop-color="#41B883" />
+      <stop offset="100%" stop-color="#2C8C61" />
+    </linearGradient>
+
+    <!-- Deep Slate Gradient (Inner Depth) -->
+    <linearGradient id="slateDepth" x1="20%" y1="0%" x2="80%" y2="100%">
+      <stop offset="0%" stop-color="#1E2A38" /> <!-- Deep inset shadow -->
+      <stop offset="50%" stop-color="#35495E" /> <!-- Classic Vue Slate -->
+      <stop offset="100%" stop-color="#4D6A87" /> <!-- Subtle rim light -->
+    </linearGradient>
+
+    <!-- Universal Colored Shadow / Glow (Outer) -->
+    <filter id="floatShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="15" flood-color="#41B883" flood-opacity="0.45" />
+    </filter>
+
+    <!-- Tight Drop Shadow for Inner Slate Elements -->
+    <filter id="innerShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#000000" flood-opacity="0.35" />
+    </filter>
+
+    <!-- Fast Loader Animations -->
+    <style>
+      .ear-flap {
+        transform-origin: 250px 250px;
+        animation: flap 1.2s ease-in-out infinite;
+      }
+      
+      @keyframes flap {
+        0%, 100% { transform: scaleX(1); }
+        50% { transform: scaleX(0.75); }
+      }
+
+      .eye {
+        transform-origin: center;
+        transform-box: fill-box;
+        animation: blink 3s infinite;
+      }
+      
+      @keyframes blink {
+        0%, 92%, 100% { transform: scaleY(1); }
+        96% { transform: scaleY(0); } 
+      }
+    </style>
+  </defs>
+
+  <!-- Face group with the fast ear-flap animation AND the universal shadow applied -->
+  <g class="ear-flap" filter="url(#floatShadow)">
+    
+    <!-- OUTER "V" (Shiny Vue Emerald Green) -->
+    <g>
+      <!-- Left Ear -->
+      <path 
+        d="M 40 160 C 70 100, 130 140, 160 140 L 210 140 C 225 200, 240 280, 250 370 L 250 390 C 180 300, 130 250, 40 160 Z" 
+        fill="url(#shinyLeft)" 
+      />
+
+      <!-- Right Ear -->
+      <path 
+        d="M 460 160 C 430 100, 370 140, 340 140 L 290 140 C 275 200, 260 280, 250 370 L 250 390 C 320 300, 370 250, 460 160 Z" 
+        fill="url(#shinyRight)" 
+      />
+    </g>
+
+    <!-- INNER STRIPS & EYES (Layered Vue Slate) -->
+    <!-- Applying both the slate gradient and the tight drop shadow here -->
+    <g fill="url(#slateDepth)" filter="url(#innerShadow)">
+      <!-- Left Inner Slate Strip -->
+      <path d="M 160 140 L 210 140 C 225 200, 240 280, 250 365 L 250 380 C 215 280, 185 190, 160 140 Z" />
+
+      <!-- Right Inner Slate Strip -->
+      <path d="M 340 140 L 290 140 C 275 200, 260 280, 250 365 L 250 380 C 285 280, 315 190, 340 140 Z" />
+
+      <!-- Left Eye Crescent -->
+      <path class="eye" d="M 150 230 Q 180 215 200 245 Q 180 225 150 230 Z" />
+
+      <!-- Right Eye Crescent -->
+      <path class="eye" d="M 350 230 Q 320 215 300 245 Q 320 225 350 230 Z" />
+    </g>
+
+  </g>
+</svg>
