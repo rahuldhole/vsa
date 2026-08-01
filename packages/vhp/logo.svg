@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="100%" height="100%">
+  <!-- 
+    VHP (Vue + Ganesha) Minimal Line Art
+    The two halves now merge into a shared vertical seam at the center (X:250),
+    creating a thicker, solid connection that terminates in a perfect, sharp "V" point.
+  -->
+
+  <!-- OUTER "V" (Vue Emerald Green) -->
+  <g fill="#41B883">
+    <!-- Left Ear -->
+    <!-- Inner curve hits center at Y:370, drops straight down to form a solid seam, ends at sharp point Y:390 -->
+    <path d="M 40 160 C 70 100, 130 140, 160 140 L 210 140 C 225 200, 240 280, 250 370 L 250 390 C 180 300, 130 250, 40 160 Z" />
+
+    <!-- Right Ear -->
+    <!-- Mirrors the left, sharing the exact 20px vertical seam before terminating at the sharp V point -->
+    <path d="M 460 160 C 430 100, 370 140, 340 140 L 290 140 C 275 200, 260 280, 250 370 L 250 390 C 320 300, 370 250, 460 160 Z" />
+  </g>
+
+  <!-- INNER STRIPS & EYES (Vue Slate Dark) -->
+  <g fill="#35495E">
+    <!-- Left Inner Slate Strip -->
+    <!-- Follows the seam logic, merging safely at the center axis without crossing -->
+    <path d="M 160 140 L 210 140 C 225 200, 240 280, 250 365 L 250 380 C 215 280, 185 190, 160 140 Z" />
+
+    <!-- Right Inner Slate Strip -->
+    <!-- Follows the seam logic, merging safely at the center axis without crossing -->
+    <path d="M 340 140 L 290 140 C 275 200, 260 280, 250 365 L 250 380 C 285 280, 315 190, 340 140 Z" />
+
+    <!-- Left Eye Crescent -->
+    <path d="M 150 230 Q 180 215 200 245 Q 180 225 150 230 Z" />
+
+    <!-- Right Eye Crescent -->
+    <path d="M 350 230 Q 320 215 300 245 Q 320 225 350 230 Z" />
+  </g>
+</svg>
