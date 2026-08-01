@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="100%" height="100%">
+  <!-- 
+    VHP (Vue + Ganesha) Minimal Line Art
+    The entire face (green ears, dark strips, and eyes) now flap together 
+    to maintain perfect alignment and enhance the 3D optical illusion.
+  -->
+  <defs>
+    <!-- Shiny Emerald Gradients -->
+    <linearGradient id="shinyLeft" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#80E3B6" />
+      <stop offset="40%" stop-color="#41B883" />
+      <stop offset="100%" stop-color="#2C8C61" />
+    </linearGradient>
+
+    <linearGradient id="shinyRight" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#80E3B6" />
+      <stop offset="40%" stop-color="#41B883" />
+      <stop offset="100%" stop-color="#2C8C61" />
+    </linearGradient>
+
+    <!-- Elegant Animations -->
+    <style>
+      /* Slow, majestic 12-second ear flap applied to the whole face */
+      .ear-flap {
+        transform-origin: 250px 250px; /* Anchors the flap at the exact center */
+        animation: flap 12s ease-in-out infinite;
+      }
+      
+      @keyframes flap {
+        0%, 100% { transform: scaleX(1); }
+        50% { transform: scaleX(0.88); } /* Simulates 3D rotation without breaking seams */
+      }
+
+      /* Slowed down blink */
+      .eye {
+        transform-origin: center;
+        transform-box: fill-box;
+        animation: blink 6s infinite;
+      }
+      
+      @keyframes blink {
+        0%, 96%, 100% { transform: scaleY(1); }
+        98% { transform: scaleY(0); } 
+      }
+    </style>
+  </defs>
+
+  <!-- EVERYTHING is now inside the ear-flap group so it scales together seamlessly -->
+  <g class="ear-flap">
+    
+    <!-- OUTER "V" (Shiny Vue Emerald Green) -->
+    <g>
+      <!-- Left Ear -->
+      <path 
+        d="M 40 160 C 70 100, 130 140, 160 140 L 210 140 C 225 200, 240 280, 250 370 L 250 390 C 180 300, 130 250, 40 160 Z" 
+        fill="url(#shinyLeft)" 
+      />
+
+      <!-- Right Ear -->
+      <path 
+        d="M 460 160 C 430 100, 370 140, 340 140 L 290 140 C 275 200, 260 280, 250 370 L 250 390 C 320 300, 370 250, 460 160 Z" 
+        fill="url(#shinyRight)" 
+      />
+    </g>
+
+    <!-- INNER STRIPS & EYES (Vue Slate Dark) -->
+    <g fill="#35495E">
+      <!-- Left Inner Slate Strip -->
+      <path d="M 160 140 L 210 140 C 225 200, 240 280, 250 365 L 250 380 C 215 280, 185 190, 160 140 Z" />
+
+      <!-- Right Inner Slate Strip -->
+      <path d="M 340 140 L 290 140 C 275 200, 260 280, 250 365 L 250 380 C 285 280, 315 190, 340 140 Z" />
+
+      <!-- Left Eye Crescent -->
+      <path class="eye" d="M 150 230 Q 180 215 200 245 Q 180 225 150 230 Z" />
+
+      <!-- Right Eye Crescent -->
+      <path class="eye" d="M 350 230 Q 320 215 300 245 Q 320 225 350 230 Z" />
+    </g>
+
+  </g>
+</svg>
